@@ -6,7 +6,18 @@ import os, requests
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'change-me-in-production')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///alumnihub.db')
+database_url = os.environ.get('DATABASE_URL', '').strip()
+# Render PostgreSQL uses a PostgreSQL connection URL. Older providers may still
+# expose postgres://, while SQLAlchemy expects postgresql://.
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///alumnihub.db'
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+}
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
@@ -300,6 +311,14 @@ def whatsapp_webhook():
     except Exception as exc:
         app.logger.warning('Webhook parse error: %s', exc)
     return jsonify({'status':'ok'}), 200
+
+@app.route('/health')
+def health():
+    try:
+        db.session.execute(db.text('SELECT 1'))
+        return jsonify({'status': 'ok', 'database': 'connected'}), 200
+    except Exception as exc:
+        return jsonify({'status': 'error', 'database': 'unavailable', 'detail': str(exc)}), 503
 
 @app.route('/api/summary')
 def api_summary():
