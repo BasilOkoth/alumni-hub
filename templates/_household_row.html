@@ -1,0 +1,33 @@
+<div class="household-row">
+  <div class="household-person">
+    <span class="mini-avatar">{{ person.relationship[:1] }}</span>
+    <div>
+      <strong>{{ person.full_name }}</strong>
+      <small>{{ person.relationship }} · Registered {{ person.registered_at.strftime('%d %b %Y') }}</small>
+    </div>
+  </div>
+  <div class="household-row-actions">
+    <span class="cover-state {% if person.verified %}verified{% else %}pending{% endif %}">{{ 'Verified' if person.verified else 'Pending' }}</span>
+    {% if session.get('is_admin') %}
+    <details class="row-edit">
+      <summary>Edit</summary>
+      <form method="post" action="{{ url_for('edit_household_member', household_id=person.id) }}" class="premium-form compact-form row-edit-form">
+        <div class="field-grid">
+          <div class="field"><label>Full name</label><input name="full_name" value="{{ person.full_name }}" required></div>
+          <div class="field"><label>Relationship</label><select name="relationship">{% for rel in ['Spouse','Child','Mother','Father'] %}<option value="{{ rel }}" {% if person.relationship == rel %}selected{% endif %}>{{ rel }}</option>{% endfor %}</select></div>
+        </div>
+        <div class="field-grid">
+          <div class="field"><label>Phone</label><input name="phone" value="{{ person.phone or '' }}"></div>
+          <div class="field"><label>Date of birth</label><input type="date" name="date_of_birth" value="{{ person.date_of_birth.isoformat() if person.date_of_birth else '' }}"></div>
+        </div>
+        <p class="form-note">Changing protected details resets verification. Verify again after checking the update.</p>
+        <div class="row-buttons">
+          <button class="button dark small-button">Save changes</button>
+        </div>
+      </form>
+    </details>
+    {% if not person.verified %}<form method="post" action="{{ url_for('verify_household_member', household_id=person.id) }}"><button class="mini-action">Verify</button></form>{% endif %}
+    <form method="post" action="{{ url_for('deactivate_household_member', household_id=person.id) }}" onsubmit="return confirm('Deactivate this person from current cover? The historical record will be retained.');"><button class="mini-action danger">Deactivate cover</button></form>
+    {% endif %}
+  </div>
+</div>

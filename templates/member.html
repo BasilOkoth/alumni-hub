@@ -24,7 +24,9 @@
     <p>{{ member.looking_for or 'Not added yet.' }}</p>
   </article>
 
-  <article class="profile-card welfare-account">
+  {% if can_view_private %}
+  <article class="profile-card welfare-account private-card">
+    <div class="privacy-label">PRIVATE · AUTHORIZED VIEW</div>
     <div class="row-between">
       <div><span class="eyebrow">WELFARE ACCOUNT</span><h2>{{ member.welfare_status }}</h2></div>
       <strong>KES {{ member.amount_paid|round(0)|int }}</strong>
@@ -36,90 +38,156 @@
     </div>
   </article>
 
-  <article class="profile-card">
+  <article class="profile-card private-card">
+    <div class="privacy-label">PRIVATE · AUTHORIZED VIEW</div>
     <span class="eyebrow">WHATSAPP IDENTITY</span>
     <h2>{{ member.phone[:4] }}••••{{ member.phone[-3:] }}</h2>
-    <p>This number connects the profile to the private WhatsApp assistant. Send <strong>COVER</strong> to view registered household cover.</p>
+    <p>This number connects the profile to the private WhatsApp assistant.</p>
   </article>
+  {% else %}
+  <article class="profile-card privacy-summary">
+    <span class="eyebrow">WELFARE MEMBERSHIP</span>
+    <h2>{{ member.welfare_status }}</h2>
+    <p>Contribution balances, household names and payout information are private and are not displayed in the member directory.</p>
+  </article>
+  {% endif %}
 </section>
 
 <section class="section">
   <div class="panel-heading">
-    <div><span class="eyebrow">WELFARE COVER</span><h2>People registered under this member.</h2></div>
-    <span class="muted-copy">Principal + registered household</span>
+    <div><span class="eyebrow">WELFARE COVER</span><h2>Cover linked to {{ member.name }}.</h2></div>
+    {% if can_view_private %}<span class="muted-copy">Private household record</span>{% endif %}
   </div>
 
-  <div class="cover-grid">
-    <article class="cover-card principal-cover">
-      <div class="cover-icon">P</div>
-      <div><small>PRINCIPAL</small><h3>{{ member.name }}</h3><p>Covered while welfare membership is active.</p></div>
-      <span class="cover-state {% if member.welfare_status=='Active' %}verified{% endif %}">{{ 'Active' if member.welfare_status=='Active' else 'Not active' }}</span>
-    </article>
-
-    {% for person in member.household_members if person.active %}
-    <article class="cover-card">
-      <div class="cover-icon">{{ person.relationship[:1] }}</div>
-      <div><small>{{ person.relationship|upper }}</small><h3>{{ person.full_name }}</h3><p>Registered {{ person.registered_at.strftime('%d %b %Y') }}</p></div>
-      <span class="cover-state {% if person.verified %}verified{% else %}pending{% endif %}">{{ 'Verified' if person.verified else 'Pending verification' }}</span>
-      {% if session.get('is_admin') %}
-      <div class="cover-admin-actions">
-        {% if not person.verified %}<form method="post" action="{{ url_for('verify_household_member', household_id=person.id) }}"><button class="mini-action">Verify</button></form>{% endif %}
-        <form method="post" action="{{ url_for('deactivate_household_member', household_id=person.id) }}"><button class="mini-action danger">Remove</button></form>
+  {% if can_view_private %}
+  <article class="household-summary-card private-card">
+    <div class="household-summary-main">
+      <div class="cover-icon principal-icon">{{ member.initials[:1] }}</div>
+      <div>
+        <small>PRINCIPAL MEMBER</small>
+        <h3>{{ member.name }}</h3>
+        <p>{{ household_summary.total }} household member{% if household_summary.total != 1 %}s{% endif %} registered under this principal.</p>
       </div>
-      {% endif %}
-    </article>
-    {% else %}
-    <div class="premium-empty wide"><strong>No household members registered yet.</strong><p>Spouse, children, mother and father can be declared before they need support.</p></div>
-    {% endfor %}
-  </div>
+      <span class="cover-state {% if member.welfare_status=='Active' %}verified{% endif %}">{{ 'Active' if member.welfare_status=='Active' else 'Not active' }}</span>
+    </div>
+
+    <div class="household-metrics">
+      <div><strong>{{ household_summary.total }}</strong><span>Household</span></div>
+      <div><strong>{{ household_summary.verified }}</strong><span>Verified</span></div>
+      <div><strong>{{ household_summary.pending }}</strong><span>Pending</span></div>
+    </div>
+
+    <details class="household-disclosure">
+      <summary><span>View household</span><span class="summary-hint">Private details</span></summary>
+      <div class="household-disclosure-body">
+        {% set spouse_people = member.household_members|selectattr('active')|selectattr('relationship', 'equalto', 'Spouse')|list %}
+        {% set child_people = member.household_members|selectattr('active')|selectattr('relationship', 'equalto', 'Child')|list %}
+        {% set mother_people = member.household_members|selectattr('active')|selectattr('relationship', 'equalto', 'Mother')|list %}
+        {% set father_people = member.household_members|selectattr('active')|selectattr('relationship', 'equalto', 'Father')|list %}
+
+        <div class="relationship-group">
+          <div class="relationship-heading"><span>Spouse</span><b>{{ spouse_people|length }}</b></div>
+          {% for person in spouse_people %}{% include '_household_row.html' %}{% else %}<p class="empty-mini">None registered.</p>{% endfor %}
+        </div>
+
+        <details class="relationship-group nested-disclosure" {% if child_people|length <= 1 %}open{% endif %}>
+          <summary class="relationship-heading"><span>Children</span><b>{{ child_people|length }}</b></summary>
+          {% for person in child_people %}{% include '_household_row.html' %}{% else %}<p class="empty-mini">None registered.</p>{% endfor %}
+        </details>
+
+        <div class="relationship-group">
+          <div class="relationship-heading"><span>Parents</span><b>{{ (mother_people|length) + (father_people|length) }}</b></div>
+          {% for person in mother_people %}{% include '_household_row.html' %}{% endfor %}
+          {% for person in father_people %}{% include '_household_row.html' %}{% endfor %}
+          {% if not mother_people and not father_people %}<p class="empty-mini">None registered.</p>{% endif %}
+        </div>
+      </div>
+    </details>
+  </article>
+  {% else %}
+  <article class="household-private-notice">
+    <div class="lock-mark">●</div>
+    <div>
+      <h3>Household information is private.</h3>
+      <p>Only the member and authorized welfare administrators should access registered spouse, children, parent and payout details.</p>
+    </div>
+  </article>
+  {% endif %}
 </section>
 
 {% if session.get('is_admin') %}
 <section class="section">
-  <div class="admin-tools household-admin">
-    <div class="section-intro left"><span class="eyebrow">PAYOUT SAFETY</span><h2>Verify the payment destination.</h2><p>The normal payout goes to the principal member. If the principal member dies, the case uses the registered next of kin instead. Once a case enters approval, the selected number is frozen for that cycle.</p></div>
-    <form method="post" action="{{ url_for('update_payout_profile', member_id=member.id) }}" class="premium-form compact-form">
-      <div class="field"><label>Normal welfare payout number</label><input name="payout_phone" value="{{ member.payout_profile.payout_phone if member.payout_profile else member.phone }}" required></div>
+  <details class="admin-tools collapsible-admin">
+    <summary><span><span class="eyebrow">ADMINISTRATION</span><strong>Edit principal member</strong></span><span>Edit details</span></summary>
+    <form method="post" action="{{ url_for('edit_member_profile', member_id=member.id) }}" class="premium-form compact-form admin-collapse-body">
       <div class="field-grid">
-        <div class="field"><label>Next of kin</label><input name="next_of_kin_name" value="{{ member.payout_profile.next_of_kin_name if member.payout_profile else '' }}"></div>
-        <div class="field"><label>Next-of-kin M-PESA number</label><input name="next_of_kin_phone" value="{{ member.payout_profile.next_of_kin_phone if member.payout_profile else '' }}"></div>
+        <div class="field"><label>Full name</label><input name="name" value="{{ member.name }}" required></div>
+        <div class="field"><label>Phone</label><input name="phone" value="{{ member.phone }}" required></div>
       </div>
-      <label class="check-line"><input type="checkbox" name="verified" {% if member.payout_profile and member.payout_profile.verified %}checked{% endif %}> Committee has verified these payout details</label>
-      <button class="button dark">Save payout profile</button>
+      <div class="field-grid">
+        <div class="field"><label>Profession</label><input name="profession" value="{{ member.profession or '' }}"></div>
+        <div class="field"><label>Location</label><input name="location" value="{{ member.location or '' }}"></div>
+      </div>
+      <div class="field"><label>Class / year</label><input name="class_year" value="{{ member.class_year or '' }}"></div>
+      <div class="field"><label>Can help with</label><textarea name="can_help" rows="3">{{ member.can_help or '' }}</textarea></div>
+      <div class="field"><label>Currently looking for</label><textarea name="looking_for" rows="3">{{ member.looking_for or '' }}</textarea></div>
+      <button class="button dark">Save member details</button>
     </form>
-  </div>
+  </details>
 </section>
 
-<section class="section">
-  <div class="admin-tools household-admin">
-    <div class="section-intro left"><span class="eyebrow">COMMITTEE TOOL</span><h2>Add a covered person.</h2><p>New additions should be checked against the group's rules before being verified.</p></div>
-    <form method="post" action="{{ url_for('add_household_member', member_id=member.id) }}" class="premium-form compact-form">
-      <div class="field-grid">
-        <div class="field"><label>Full name</label><input name="full_name" required></div>
-        <div class="field"><label>Relationship</label><select name="relationship"><option>Spouse</option><option>Child</option><option>Mother</option><option>Father</option></select></div>
-      </div>
-      <div class="field-grid">
-        <div class="field"><label>Phone</label><input name="phone" placeholder="Optional"></div>
-        <div class="field"><label>Date of birth</label><input type="date" name="date_of_birth"></div>
-      </div>
-      <label class="check-line"><input type="checkbox" name="verified"> Verify immediately</label>
-      <button class="button dark">Add covered person</button>
-    </form>
-  </div>
+<section class="section private-admin-section">
+  <details class="admin-tools collapsible-admin">
+    <summary><span><span class="eyebrow">PAYOUT SAFETY</span><strong>Payment destination</strong></span><span>Manage</span></summary>
+    <div class="admin-collapse-body">
+      <p class="muted-copy">Normal payout goes to the principal member. If the principal member dies, the registered next of kin can be used instead. Once approval begins, the selected destination is frozen for that case.</p>
+      <form method="post" action="{{ url_for('update_payout_profile', member_id=member.id) }}" class="premium-form compact-form">
+        <div class="field"><label>Normal welfare payout number</label><input name="payout_phone" value="{{ member.payout_profile.payout_phone if member.payout_profile else member.phone }}" required></div>
+        <div class="field-grid">
+          <div class="field"><label>Next of kin</label><input name="next_of_kin_name" value="{{ member.payout_profile.next_of_kin_name if member.payout_profile else '' }}"></div>
+          <div class="field"><label>Next-of-kin M-PESA number</label><input name="next_of_kin_phone" value="{{ member.payout_profile.next_of_kin_phone if member.payout_profile else '' }}"></div>
+        </div>
+        <label class="check-line"><input type="checkbox" name="verified" {% if member.payout_profile and member.payout_profile.verified %}checked{% endif %}> Committee has verified these payout details</label>
+        <button class="button dark">Save payout profile</button>
+      </form>
+    </div>
+  </details>
+</section>
+
+<section class="section private-admin-section">
+  <details class="admin-tools collapsible-admin">
+    <summary><span><span class="eyebrow">HOUSEHOLD COVER</span><strong>Add a covered person</strong></span><span>Add</span></summary>
+    <div class="admin-collapse-body">
+      <p class="muted-copy">New additions should be checked against the group's rules before verification.</p>
+      <form method="post" action="{{ url_for('add_household_member', member_id=member.id) }}" class="premium-form compact-form">
+        <div class="field-grid">
+          <div class="field"><label>Full name</label><input name="full_name" required></div>
+          <div class="field"><label>Relationship</label><select name="relationship"><option>Spouse</option><option>Child</option><option>Mother</option><option>Father</option></select></div>
+        </div>
+        <div class="field-grid">
+          <div class="field"><label>Phone</label><input name="phone" placeholder="Optional"></div>
+          <div class="field"><label>Date of birth</label><input type="date" name="date_of_birth"></div>
+        </div>
+        <button class="button dark">Add covered person</button>
+      </form>
+    </div>
+  </details>
 </section>
 {% endif %}
 
-{% if member.support_cases %}
-<section class="section">
-  <div class="panel-heading"><div><span class="eyebrow">SUPPORT HISTORY</span><h2>Cases linked to this household.</h2></div></div>
-  <div class="timeline">
-    {% for case in member.support_cases|sort(attribute='created_at', reverse=true) %}
-    <article class="timeline-item">
-      <div class="timeline-date">{{ case.event_date.strftime('%d') }}<small>{{ case.event_date.strftime('%b') }}</small></div>
-      <div><span class="status-chip">{{ case.status }}</span><h3>{{ case.covered_name }}</h3><p>{{ case.support_type }} · {{ case.relationship }}{% if case.description %} · {{ case.description }}{% endif %}</p><strong>KES {{ case.approved_support|round(0)|int }}</strong></div>
-    </article>
-    {% endfor %}
-  </div>
+{% if can_view_private and member.support_cases %}
+<section class="section private-admin-section">
+  <details class="history-disclosure">
+    <summary><span><span class="eyebrow">SUPPORT HISTORY</span><strong>Cases linked to this household</strong></span><span>{{ member.support_cases|length }} case{% if member.support_cases|length != 1 %}s{% endif %}</span></summary>
+    <div class="timeline history-body">
+      {% for case in member.support_cases|sort(attribute='created_at', reverse=true) %}
+      <article class="timeline-item">
+        <div class="timeline-date">{{ case.event_date.strftime('%d') }}<small>{{ case.event_date.strftime('%b') }}</small></div>
+        <div><span class="status-chip">{{ case.status }}</span><h3>{{ case.covered_name }}</h3><p>{{ case.support_type }} · {{ case.relationship }}{% if case.description %} · {{ case.description }}{% endif %}</p><strong>KES {{ case.approved_support|round(0)|int }}</strong></div>
+      </article>
+      {% endfor %}
+    </div>
+  </details>
 </section>
 {% endif %}
 {% endblock %}

@@ -677,7 +677,25 @@ def members():
 
 @app.route("/member/<int:member_id>")
 def member_profile(member_id):
-    return render_template("member.html", member=Member.query.get_or_404(member_id))
+    member = Member.query.get_or_404(member_id)
+    active_household = [person for person in member.household_members if person.active]
+    verified_household = sum(1 for person in active_household if person.verified)
+    pending_household = len(active_household) - verified_household
+    household_summary = {
+        "total": len(active_household),
+        "verified": verified_household,
+        "pending": pending_household,
+        "spouses": sum(1 for person in active_household if person.relationship == "Spouse"),
+        "children": sum(1 for person in active_household if person.relationship == "Child"),
+        "parents": sum(1 for person in active_household if person.relationship in {"Mother", "Father"}),
+    }
+    can_view_private = bool(session.get("is_admin") or session.get("approver_id"))
+    return render_template(
+        "member.html",
+        member=member,
+        household_summary=household_summary,
+        can_view_private=can_view_private,
+    )
 
 
 @app.route("/opportunities", methods=["GET", "POST"])
@@ -786,6 +804,83 @@ def add_household_member(member_id):
     return redirect(url_for("member_profile", member_id=member.id))
 
 
+@app.route("/member/<int:member_id>/edit", methods=["POST"])
+@admin_required
+def edit_member_profile(member_id):
+    member = Member.query.get_or_404(member_id)
+    member.name = request.form.get("name", "").strip() or member.name
+    member.class_year = request.form.get("class_year", "").strip()
+    member.location = request.form.get("location", "").strip()
+    member.profession = request.form.get("profession", "").strip()
+    member.can_help = request.form.get("can_help", "").strip()
+    member.looking_for = request.form.get("looking_for", "").strip()
+    phone = normalize_phone(request.form.get("phone", "").strip())
+    if phone and phone != member.phone:
+        duplicate = Member.query.filter(Member.phone == phone, Member.id != member.id).first()
+        if duplicate:
+            flash("That phone number is already linked to another member.", "error")
+            return redirect(url_for("member_profile", member_id=member.id))
+        member.phone = phone
+    db.session.commit()
+    flash("Member details updated.", "success")
+    return redirect(url_for("member_profile", member_id=member.id))
+
+
+@app.route("/household/<int:household_id>/edit", methods=["POST"])
+@admin_required
+def edit_household_member(household_id):
+    person = HouseholdMember.query.get_or_404(household_id)
+    relationship = request.form.get("relationship", "").strip()
+    if relationship not in {"Spouse", "Child", "Mother", "Father"}:
+        flash("Choose a valid covered relationship.", "error")
+        return redirect(url_for("member_profile", member_id=person.member_id))
+
+    full_name = request.form.get("full_name", "").strip()
+    if not full_name:
+        flash("Enter the covered person's name.", "error")
+        return redirect(url_for("member_profile", member_id=person.member_id))
+
+    if relationship in {"Spouse", "Mother", "Father"}:
+        duplicate = HouseholdMember.query.filter(
+            HouseholdMember.member_id == person.member_id,
+            HouseholdMember.relationship == relationship,
+            HouseholdMember.active.is_(True),
+            HouseholdMember.id != person.id,
+        ).first()
+        if duplicate:
+            flash(f"This member already has an active {relationship.lower()} registered.", "error")
+            return redirect(url_for("member_profile", member_id=person.member_id))
+
+    dob = None
+    if request.form.get("date_of_birth"):
+        try:
+            dob = date.fromisoformat(request.form["date_of_birth"])
+        except ValueError:
+            flash("Enter a valid date of birth.", "error")
+            return redirect(url_for("member_profile", member_id=person.member_id))
+
+    new_phone = normalize_phone(request.form.get("phone", "")) if request.form.get("phone") else ""
+    changed = any([
+        person.full_name != full_name,
+        person.relationship != relationship,
+        (person.phone or "") != (new_phone or ""),
+        person.date_of_birth != dob,
+    ])
+
+    person.full_name = full_name
+    person.relationship = relationship
+    person.phone = new_phone
+    person.date_of_birth = dob
+    if changed:
+        person.verified = False
+    db.session.commit()
+    if changed:
+        flash("Covered-person details updated. Verification was reset because protected details changed.", "success")
+    else:
+        flash("No protected household details changed.", "success")
+    return redirect(url_for("member_profile", member_id=person.member_id))
+
+
 @app.route("/household/<int:household_id>/verify", methods=["POST"])
 @admin_required
 def verify_household_member(household_id):
@@ -802,7 +897,7 @@ def deactivate_household_member(household_id):
     person = HouseholdMember.query.get_or_404(household_id)
     person.active = False
     db.session.commit()
-    flash(f"{person.full_name} was removed from active cover.", "success")
+    flash(f"{person.full_name} was deactivated from current cover. The historical record has been retained.", "success")
     return redirect(url_for("member_profile", member_id=person.member_id))
 
 
