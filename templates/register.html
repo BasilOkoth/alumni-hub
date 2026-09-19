@@ -1,4 +1,3 @@
-
 {% extends 'base.html' %}
 {% block title %}Join — {{ community_name }}{% endblock %}
 {% block content %}
@@ -9,9 +8,9 @@
     <p>Tell the network what you do, what you can help with and what you may need. Welfare membership is optional and explicit.</p>
 
     <div class="story-note">
-      <small>THE PRINCIPLE</small>
-      <strong>Belonging is for everyone. Financial welfare is opt-in.</strong>
-      <p>Network-only members still access people, opportunities, voting and collective projects.</p>
+      <small>HOUSEHOLD COVER</small>
+      <strong>Register the people who may be supported before support is needed.</strong>
+      <p>The principal alumnus is automatically the principal covered member when welfare is active. A spouse, children, mother and father can be declared here and verified by the committee.</p>
     </div>
   </div>
 
@@ -45,6 +44,23 @@
         <input type="number" name="annual_commitment" value="2400" min="0">
       </div>
     </div>
+
+    <div class="form-step"><span>04</span><div><strong>Household cover</strong><small>Declare first; verify before claims</small></div></div>
+    <div class="coverage-note">The principal alumnus is covered as <strong>Principal</strong> while welfare membership is active. Household names entered here remain <strong>pending verification</strong> until the committee confirms them.</div>
+    <div class="field-grid">
+      <div class="field"><label>Spouse name</label><input name="spouse_name" placeholder="Optional"></div>
+      <div class="field"><label>Spouse phone</label><input name="spouse_phone" placeholder="Optional"></div>
+    </div>
+    <div class="field-grid">
+      <div class="field"><label>Mother's name</label><input name="mother_name" placeholder="Optional"></div>
+      <div class="field"><label>Father's name</label><input name="father_name" placeholder="Optional"></div>
+    </div>
+    <div class="field">
+      <label>Children</label>
+      <textarea name="children_names" placeholder="One child per line&#10;Child One&#10;Child Two"></textarea>
+      <small class="field-help">The committee can later record dates of birth and update cover when family circumstances change.</small>
+    </div>
+
     <button class="button dark full" type="submit">Create my alumni profile</button>
   </form>
 </section>

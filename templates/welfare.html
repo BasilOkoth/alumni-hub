@@ -1,11 +1,10 @@
-
 {% extends 'base.html' %}
 {% block title %}Welfare — {{ community_name }}{% endblock %}
 {% block content %}
 <section class="page-hero slim">
   <span class="eyebrow light">WELFARE CIRCLE</span>
-  <h1>Support that does not depend on guilt or last-minute pressure.</h1>
-  <p>Members opt in, contributions are visible, and support follows rules agreed before an emergency happens.</p>
+  <h1>Know who is covered, what qualifies, and what support is available.</h1>
+  <p>Bereavement is only one need. The same transparent structure can support serious illness, hospitalisation and genuine emergencies without turning every case into a new WhatsApp fundraiser.</p>
 </section>
 
 <section class="section">
@@ -16,13 +15,41 @@
   </div>
 </section>
 
+<section class="section">
+  <div class="panel-heading">
+    <div><span class="eyebrow">COVERED LIVES</span><h2>Know the fund's real exposure.</h2></div>
+    <a href="{{ url_for('members') }}">View members →</a>
+  </div>
+  <div class="coverage-stats">
+    <div><small>PRINCIPAL MEMBERS</small><strong>{{ coverage.members }}</strong></div>
+    <div><small>SPOUSES</small><strong>{{ coverage.spouses }}</strong></div>
+    <div><small>CHILDREN</small><strong>{{ coverage.children }}</strong></div>
+    <div><small>PARENTS</small><strong>{{ coverage.parents }}</strong></div>
+    <div class="coverage-total"><small>TOTAL COVERED LIVES</small><strong>{{ coverage.lives }}</strong></div>
+  </div>
+</section>
+
+<section class="section support-types">
+  <div class="section-intro left">
+    <span class="eyebrow">WHAT CAN BE SUPPORTED?</span>
+    <h2>Define support before a crisis.</h2>
+    <p>The committee sets the benefit, waiting period and annual claim limit for each relationship and event type. Routine expenses do not automatically become welfare claims.</p>
+  </div>
+  <div class="support-type-grid">
+    <article><span>01</span><h3>Bereavement</h3><p>Principal member or a verified spouse, child, mother or father.</p></article>
+    <article><span>02</span><h3>Serious illness</h3><p>Defined major illness requiring documented treatment, not ordinary outpatient visits.</p></article>
+    <article><span>03</span><h3>Hospitalisation</h3><p>Support can be tied to admission criteria agreed by the group.</p></article>
+    <article><span>04</span><h3>Accident / emergency</h3><p>Exceptional urgent support with evidence and a defined financial cap.</p></article>
+  </div>
+</section>
+
 {% if session.get('is_admin') %}
 <section class="section admin-tools">
   <div class="section-intro left">
     <span class="eyebrow">COMMITTEE TOOLS</span>
-    <h2>Record money and support events.</h2>
+    <h2>Money, rules and support cases.</h2>
   </div>
-  <div class="tool-grid">
+  <div class="tool-grid three-tools">
     <form class="premium-form compact-form" method="post" action="{{url_for('add_contribution')}}">
       <h3>Record contribution</h3>
       <div class="field"><label>Member</label><select name="member_id">{% for m in members %}<option value="{{m.id}}">{{m.name}}</option>{% endfor %}</select></div>
@@ -31,16 +58,30 @@
       <button class="button dark">Record payment</button>
     </form>
 
-    <form class="premium-form compact-form" method="post" action="{{url_for('add_welfare_event')}}">
-      <h3>Create welfare event</h3>
-      <div class="field"><label>Member</label><select name="member_id">{% for m in members %}<option value="{{m.id}}">{{m.name}}</option>{% endfor %}</select></div>
-      <div class="field-grid">
-        <div class="field"><label>Event</label><input name="event_type" value="Bereavement" required></div>
-        <div class="field"><label>Support (KES)</label><input type="number" name="approved_support"></div>
-      </div>
+    <form class="premium-form compact-form" method="post" action="{{url_for('add_welfare_rule')}}">
+      <h3>Set benefit rule</h3>
+      <div class="field"><label>Support type</label><select name="support_type"><option>Bereavement</option><option>Serious illness</option><option>Hospitalisation</option><option>Accident / emergency</option></select></div>
+      <div class="field"><label>Relationship</label><select name="relationship"><option>Principal</option><option>Spouse</option><option>Child</option><option>Mother</option><option>Father</option></select></div>
+      <div class="field-grid"><div class="field"><label>Benefit (KES)</label><input type="number" name="benefit_amount" required></div><div class="field"><label>Waiting days</label><input type="number" name="waiting_days" value="30" min="0"></div></div>
+      <div class="field"><label>Max claims / person / year</label><input type="number" name="max_claims_per_year" value="1" min="1"></div>
+      <div class="field"><label>Eligibility notes</label><textarea name="eligibility_notes" placeholder="e.g. admission of at least 2 nights; discharge summary required"></textarea></div>
+      <button class="button dark">Save rule</button>
+    </form>
+
+    <form class="premium-form compact-form" method="post" action="{{url_for('add_support_case')}}">
+      <h3>Create support case</h3>
+      <div class="field"><label>Covered person</label><select name="covered_key" required>
+        {% for m in members if m.welfare_status == 'Active' %}
+          <option value="P:{{m.id}}">{{m.name}} — Principal</option>
+          {% for person in m.household_members if person.active %}<option value="H:{{person.id}}">{{person.full_name}} — {{person.relationship}} / {{m.name}}{% if not person.verified %} (pending verification){% endif %}</option>{% endfor %}
+        {% endfor %}
+      </select></div>
+      <div class="field"><label>Support type</label><select name="support_type"><option>Bereavement</option><option>Serious illness</option><option>Hospitalisation</option><option>Accident / emergency</option></select></div>
+      <div class="field-grid"><div class="field"><label>Event date</label><input type="date" name="event_date"></div><div class="field"><label>Support override (KES)</label><input type="number" name="approved_support" placeholder="Leave blank to use rule"></div></div>
+      <div class="field"><label>Evidence / reference</label><input name="evidence_reference" placeholder="Hospital, document ref, committee note"></div>
       <div class="field"><label>Description</label><textarea name="description"></textarea></div>
-      <div class="field"><label>Status</label><select name="status"><option>Approved</option><option>Paid</option><option>Pending</option></select></div>
-      <button class="button dark">Create event</button>
+      <div class="field"><label>Status</label><select name="status"><option>Pending</option><option>Approved</option><option>Paid</option></select></div>
+      <button class="button dark">Create case</button>
     </form>
   </div>
 </section>
@@ -48,28 +89,36 @@
 
 <section class="section">
   <div class="panel-heading">
-    <div><span class="eyebrow">SUPPORT HISTORY</span><h2>What the circle has responded to.</h2></div>
+    <div><span class="eyebrow">BENEFIT RULES</span><h2>What the group has agreed in advance.</h2></div>
     {% if not session.get('is_admin') %}<a href="{{ url_for('admin_login') }}">Committee access →</a>{% endif %}
   </div>
+  <div class="rules-grid">
+    {% for rule in rules %}
+    <article class="rule-card"><span>{{ rule.support_type }}</span><h3>{{ rule.relationship }}</h3><strong>KES {{ rule.benefit_amount|round(0)|int }}</strong><p>{{ rule.max_claims_per_year }} claim{% if rule.max_claims_per_year != 1 %}s{% endif %}/year · {{ rule.waiting_days }}-day waiting period</p>{% if rule.eligibility_notes %}<small>{{ rule.eligibility_notes }}</small>{% endif %}</article>
+    {% else %}
+    <div class="premium-empty wide"><strong>No benefit rules configured yet.</strong><p>Before accepting real contributions, agree on benefit amounts, eligibility, waiting periods and annual limits.</p></div>
+    {% endfor %}
+  </div>
+</section>
 
+<section class="section">
+  <div class="panel-heading"><div><span class="eyebrow">SUPPORT HISTORY</span><h2>Cases the circle has responded to.</h2></div></div>
   <div class="timeline">
     {% for e in events %}
       <article class="timeline-item">
-        <div class="timeline-date">{{ e.created_at.strftime('%d') }}<small>{{ e.created_at.strftime('%b') }}</small></div>
+        <div class="timeline-date">{{ e.event_date.strftime('%d') }}<small>{{ e.event_date.strftime('%b') }}</small></div>
         <div>
           <span class="status-chip">{{ e.status }}</span>
-          <h3>{{ e.member.name }}</h3>
-          <p>{{ e.event_type }}{% if e.description %} · {{ e.description }}{% endif %}</p>
+          <h3>{{ e.covered_name }}</h3>
+          <p>{{ e.support_type }} · {{ e.relationship }} · Principal member: {{ e.member.name }}{% if e.description %} · {{ e.description }}{% endif %}</p>
           <strong>KES {{ e.approved_support|round(0)|int }}</strong>
+          {% if e.evidence_reference %}<small class="evidence-line">Reference: {{ e.evidence_reference }}</small>{% endif %}
         </div>
-        {% set text='❤️ '+community_name+' Welfare Update\n\n'+e.member.name+'\n'+e.event_type+': '+e.description+'\nApproved support: KES '+(e.approved_support|round(0)|int|string)+'\nStatus: '+e.status+'\n\nDetails: '+request.url_root+'welfare' %}
+        {% set text='❤️ '+community_name+' Welfare Update\n\n'+e.covered_name+' ('+e.relationship+')\n'+e.support_type+'\nApproved support: KES '+(e.approved_support|round(0)|int|string)+'\nStatus: '+e.status+'\n\nDetails: '+request.url_root+'welfare' %}
         <a class="share-button" target="_blank" href="{{share_url(text)}}">Share to WhatsApp ↗</a>
       </article>
     {% else %}
-      <div class="premium-empty wide">
-        <strong>No welfare events have been recorded.</strong>
-        <p>The fund can still be active and ready — without waiting for tragedy to define the group.</p>
-      </div>
+      <div class="premium-empty wide"><strong>No support cases have been recorded.</strong><p>The point is to have the cover and rules ready before they are needed.</p></div>
     {% endfor %}
   </div>
 </section>

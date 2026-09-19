@@ -1,4 +1,3 @@
-
 {% extends 'base.html' %}
 {% block title %}{{ member.name }} — {{ community_name }}{% endblock %}
 {% block content %}
@@ -39,8 +38,73 @@
 
   <article class="profile-card">
     <span class="eyebrow">WHATSAPP IDENTITY</span>
-    <h2>{{ member.phone }}</h2>
-    <p>This number connects the profile to the private WhatsApp assistant.</p>
+    <h2>{{ member.phone[:4] }}••••{{ member.phone[-3:] }}</h2>
+    <p>This number connects the profile to the private WhatsApp assistant. Send <strong>COVER</strong> to view registered household cover.</p>
   </article>
 </section>
+
+<section class="section">
+  <div class="panel-heading">
+    <div><span class="eyebrow">WELFARE COVER</span><h2>People registered under this member.</h2></div>
+    <span class="muted-copy">Principal + registered household</span>
+  </div>
+
+  <div class="cover-grid">
+    <article class="cover-card principal-cover">
+      <div class="cover-icon">P</div>
+      <div><small>PRINCIPAL</small><h3>{{ member.name }}</h3><p>Covered while welfare membership is active.</p></div>
+      <span class="cover-state {% if member.welfare_status=='Active' %}verified{% endif %}">{{ 'Active' if member.welfare_status=='Active' else 'Not active' }}</span>
+    </article>
+
+    {% for person in member.household_members if person.active %}
+    <article class="cover-card">
+      <div class="cover-icon">{{ person.relationship[:1] }}</div>
+      <div><small>{{ person.relationship|upper }}</small><h3>{{ person.full_name }}</h3><p>Registered {{ person.registered_at.strftime('%d %b %Y') }}</p></div>
+      <span class="cover-state {% if person.verified %}verified{% else %}pending{% endif %}">{{ 'Verified' if person.verified else 'Pending verification' }}</span>
+      {% if session.get('is_admin') %}
+      <div class="cover-admin-actions">
+        {% if not person.verified %}<form method="post" action="{{ url_for('verify_household_member', household_id=person.id) }}"><button class="mini-action">Verify</button></form>{% endif %}
+        <form method="post" action="{{ url_for('deactivate_household_member', household_id=person.id) }}"><button class="mini-action danger">Remove</button></form>
+      </div>
+      {% endif %}
+    </article>
+    {% else %}
+    <div class="premium-empty wide"><strong>No household members registered yet.</strong><p>Spouse, children, mother and father can be declared before they need support.</p></div>
+    {% endfor %}
+  </div>
+</section>
+
+{% if session.get('is_admin') %}
+<section class="section">
+  <div class="admin-tools household-admin">
+    <div class="section-intro left"><span class="eyebrow">COMMITTEE TOOL</span><h2>Add a covered person.</h2><p>New additions should be checked against the group's rules before being verified.</p></div>
+    <form method="post" action="{{ url_for('add_household_member', member_id=member.id) }}" class="premium-form compact-form">
+      <div class="field-grid">
+        <div class="field"><label>Full name</label><input name="full_name" required></div>
+        <div class="field"><label>Relationship</label><select name="relationship"><option>Spouse</option><option>Child</option><option>Mother</option><option>Father</option></select></div>
+      </div>
+      <div class="field-grid">
+        <div class="field"><label>Phone</label><input name="phone" placeholder="Optional"></div>
+        <div class="field"><label>Date of birth</label><input type="date" name="date_of_birth"></div>
+      </div>
+      <label class="check-line"><input type="checkbox" name="verified"> Verify immediately</label>
+      <button class="button dark">Add covered person</button>
+    </form>
+  </div>
+</section>
+{% endif %}
+
+{% if member.support_cases %}
+<section class="section">
+  <div class="panel-heading"><div><span class="eyebrow">SUPPORT HISTORY</span><h2>Cases linked to this household.</h2></div></div>
+  <div class="timeline">
+    {% for case in member.support_cases|sort(attribute='created_at', reverse=true) %}
+    <article class="timeline-item">
+      <div class="timeline-date">{{ case.event_date.strftime('%d') }}<small>{{ case.event_date.strftime('%b') }}</small></div>
+      <div><span class="status-chip">{{ case.status }}</span><h3>{{ case.covered_name }}</h3><p>{{ case.support_type }} · {{ case.relationship }}{% if case.description %} · {{ case.description }}{% endif %}</p><strong>KES {{ case.approved_support|round(0)|int }}</strong></div>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
 {% endblock %}

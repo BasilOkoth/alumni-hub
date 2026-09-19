@@ -80,3 +80,27 @@ On startup it removes only these known old demo records if they still exist:
 - the old sample legacy poll
 
 Real records are left untouched.
+
+
+## Household cover + serious illness upgrade
+
+This build adds a structured welfare-cover layer:
+
+- Principal alumnus is the principal covered member while welfare membership is Active.
+- Registered covered relationships: Spouse, Child, Mother, Father.
+- Household members are submitted first and can remain Pending Verification until committee approval.
+- Covered-lives totals show the fund's actual exposure.
+- Committee-configurable benefit rules by event type and relationship.
+- Supported event types: Bereavement, Serious illness, Hospitalisation, Accident / emergency.
+- Each rule can define:
+  - benefit amount
+  - waiting period
+  - maximum claims per person per year
+  - eligibility/evidence notes
+- Support cases validate active welfare membership, household registration, verification, waiting periods and annual claim limits.
+- The WhatsApp assistant now supports the `COVER` command.
+- Existing PostgreSQL databases are safe: this upgrade adds new tables instead of changing columns on existing tables.
+
+### Important policy principle
+
+Do not define "illness" as every ordinary medical expense. The group should agree on objective thresholds, for example documented serious illness, hospital admission, or accident/emergency. This keeps the fund predictable and protects it from unlimited claims.

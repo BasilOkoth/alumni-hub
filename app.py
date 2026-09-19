@@ -1,7 +1,7 @@
 
 from functools import wraps
 from urllib.parse import quote
-from datetime import datetime
+from datetime import datetime, date, timedelta
 import os
 
 import requests
@@ -76,6 +76,49 @@ class WelfareEvent(db.Model):
     status = db.Column(db.String(40), default="Pending")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     member = db.relationship("Member", backref="welfare_events")
+
+
+class HouseholdMember(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(db.Integer, db.ForeignKey("member.id"), nullable=False)
+    full_name = db.Column(db.String(140), nullable=False)
+    relationship = db.Column(db.String(30), nullable=False)
+    phone = db.Column(db.String(40), default="")
+    date_of_birth = db.Column(db.Date, nullable=True)
+    verified = db.Column(db.Boolean, default=False)
+    active = db.Column(db.Boolean, default=True)
+    registered_at = db.Column(db.DateTime, default=datetime.utcnow)
+    cover_start_date = db.Column(db.Date, default=date.today)
+    member = db.relationship("Member", backref="household_members")
+
+
+class WelfareRule(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    support_type = db.Column(db.String(80), nullable=False)
+    relationship = db.Column(db.String(30), nullable=False)
+    benefit_amount = db.Column(db.Float, default=0)
+    max_claims_per_year = db.Column(db.Integer, default=1)
+    waiting_days = db.Column(db.Integer, default=30)
+    eligibility_notes = db.Column(db.Text, default="")
+    active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class SupportCase(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    member_id = db.Column(db.Integer, db.ForeignKey("member.id"), nullable=False)
+    household_member_id = db.Column(db.Integer, db.ForeignKey("household_member.id"), nullable=True)
+    covered_name = db.Column(db.String(140), nullable=False)
+    relationship = db.Column(db.String(30), nullable=False)
+    support_type = db.Column(db.String(80), nullable=False)
+    event_date = db.Column(db.Date, default=date.today)
+    description = db.Column(db.Text, default="")
+    approved_support = db.Column(db.Float, default=0)
+    status = db.Column(db.String(40), default="Pending")
+    evidence_reference = db.Column(db.String(220), default="")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    member = db.relationship("Member", backref="support_cases")
+    household_member = db.relationship("HouseholdMember", backref="support_cases")
 
 
 class Opportunity(db.Model):
@@ -170,6 +213,17 @@ def bot_response(member, command):
             f"Paid: KES {member.amount_paid:,.0f}\nBalance: KES {member.welfare_balance:,.0f}\n\n"
             f"View: {BASE_URL}/member/{member.id}"
         )
+    if cmd == "COVER":
+        people = HouseholdMember.query.filter_by(member_id=member.id, active=True).order_by(HouseholdMember.relationship, HouseholdMember.full_name).all()
+        lines = [f"{COMMUNITY_NAME.upper()} — WELFARE COVER", "", f"Principal: {member.name} — covered while welfare membership is active"]
+        if people:
+            for person in people:
+                state = "Verified" if person.verified else "Pending verification"
+                lines.append(f"• {person.relationship}: {person.full_name} — {state}")
+        else:
+            lines.append("No household members registered yet.")
+        lines += ["", f"View profile: {BASE_URL}/member/{member.id}"]
+        return "\n".join(lines)
     if cmd == "JOBS":
         items = Opportunity.query.order_by(Opportunity.created_at.desc()).limit(3).all()
         if not items:
@@ -200,7 +254,7 @@ def bot_response(member, command):
     return (
         f"{COMMUNITY_NAME.upper()} ASSISTANT\n\n"
         "Reply with:\nBALANCE — welfare account\nJOBS — latest opportunities\n"
-        "FUND — legacy project progress\nPROFILE — your profile\nHELP — this menu"
+        "FUND — legacy project progress\nCOVER — registered household cover\nPROFILE — your profile\nHELP — this menu"
     )
 
 
@@ -220,8 +274,9 @@ def dashboard():
     active_count = Member.query.filter_by(welfare_status="Active").count()
     contributions = Contribution.query.filter_by(kind="Welfare").all()
     fund_total = sum(c.amount for c in contributions)
-    events_all = WelfareEvent.query.order_by(WelfareEvent.created_at.desc()).all()
-    paid_out = sum(e.approved_support for e in events_all if e.status == "Paid")
+    events_all = SupportCase.query.order_by(SupportCase.created_at.desc()).all()
+    legacy_events = WelfareEvent.query.order_by(WelfareEvent.created_at.desc()).all()
+    paid_out = sum(e.approved_support for e in events_all if e.status == "Paid") + sum(e.approved_support for e in legacy_events if e.status == "Paid")
     fund_balance = fund_total - paid_out
     events = events_all[:4]
     opportunities = Opportunity.query.order_by(Opportunity.created_at.desc()).limit(5).all()
@@ -264,8 +319,30 @@ def register():
             annual_commitment=float(request.form.get("annual_commitment", 0) or 0),
         )
         db.session.add(member)
+        db.session.flush()
+
+        household_inputs = [
+            ("Spouse", request.form.get("spouse_name", "").strip(), request.form.get("spouse_phone", "").strip()),
+            ("Mother", request.form.get("mother_name", "").strip(), ""),
+            ("Father", request.form.get("father_name", "").strip(), ""),
+        ]
+        for relationship, full_name, phone_value in household_inputs:
+            if full_name:
+                db.session.add(HouseholdMember(
+                    member_id=member.id, full_name=full_name, relationship=relationship,
+                    phone=normalize_phone(phone_value) if phone_value else "", verified=False, active=True,
+                    cover_start_date=date.today(),
+                ))
+
+        children = [line.strip() for line in request.form.get("children_names", "").splitlines() if line.strip()]
+        for child_name in children:
+            db.session.add(HouseholdMember(
+                member_id=member.id, full_name=child_name, relationship="Child",
+                verified=False, active=True, cover_start_date=date.today(),
+            ))
+
         db.session.commit()
-        flash("Welcome to the circle. Your profile is now live.", "success")
+        flash("Welcome to the circle. Your profile and household cover have been submitted.", "success")
         return redirect(url_for("member_profile", member_id=member.id))
     return render_template("register.html")
 
@@ -310,18 +387,31 @@ def opportunities():
 @app.route("/welfare")
 def welfare():
     members = Member.query.order_by(Member.name).all()
-    events = WelfareEvent.query.order_by(WelfareEvent.created_at.desc()).all()
+    support_cases = SupportCase.query.order_by(SupportCase.created_at.desc()).all()
+    legacy_events = WelfareEvent.query.order_by(WelfareEvent.created_at.desc()).all()
     contributions = Contribution.query.order_by(Contribution.created_at.desc()).limit(50).all()
     fund_total = sum(c.amount for c in Contribution.query.filter_by(kind="Welfare").all())
-    total_paid_out = sum(e.approved_support for e in events if e.status == "Paid")
+    total_paid_out = sum(e.approved_support for e in support_cases if e.status == "Paid") + sum(e.approved_support for e in legacy_events if e.status == "Paid")
+    household = HouseholdMember.query.filter_by(active=True).order_by(HouseholdMember.relationship, HouseholdMember.full_name).all()
+    rules = WelfareRule.query.filter_by(active=True).order_by(WelfareRule.support_type, WelfareRule.relationship).all()
+    coverage = {
+        "members": Member.query.filter_by(welfare_status="Active").count(),
+        "spouses": HouseholdMember.query.filter_by(active=True, relationship="Spouse").count(),
+        "children": HouseholdMember.query.filter_by(active=True, relationship="Child").count(),
+        "parents": HouseholdMember.query.filter(HouseholdMember.active.is_(True), HouseholdMember.relationship.in_(["Mother", "Father"])).count(),
+    }
+    coverage["lives"] = coverage["members"] + coverage["spouses"] + coverage["children"] + coverage["parents"]
     return render_template(
         "welfare.html",
         members=members,
-        events=events,
+        events=support_cases,
         contributions=contributions,
         fund_total=fund_total,
         total_paid_out=total_paid_out,
         current_balance=fund_total - total_paid_out,
+        household=household,
+        rules=rules,
+        coverage=coverage,
     )
 
 
@@ -340,16 +430,170 @@ def add_contribution():
 @app.route("/welfare/event", methods=["POST"])
 @admin_required
 def add_welfare_event():
-    event = WelfareEvent(
-        member_id=int(request.form["member_id"]),
-        event_type=request.form["event_type"].strip(),
-        description=request.form.get("description", "").strip(),
-        approved_support=float(request.form.get("approved_support", 0) or 0),
-        status=request.form.get("status", "Approved"),
-    )
-    db.session.add(event)
+    # Kept for backward compatibility with any old links; new cases use /welfare/case.
+    return redirect(url_for("welfare"))
+
+
+@app.route("/member/<int:member_id>/household", methods=["POST"])
+@admin_required
+def add_household_member(member_id):
+    member = Member.query.get_or_404(member_id)
+    relationship = request.form.get("relationship", "").strip()
+    if relationship not in {"Spouse", "Child", "Mother", "Father"}:
+        flash("Choose a valid covered relationship.", "error")
+        return redirect(url_for("member_profile", member_id=member.id))
+    full_name = request.form.get("full_name", "").strip()
+    if not full_name:
+        flash("Enter the covered person's name.", "error")
+        return redirect(url_for("member_profile", member_id=member.id))
+    dob = None
+    if request.form.get("date_of_birth"):
+        try:
+            dob = date.fromisoformat(request.form["date_of_birth"])
+        except ValueError:
+            pass
+    db.session.add(HouseholdMember(
+        member_id=member.id, full_name=full_name, relationship=relationship,
+        phone=normalize_phone(request.form.get("phone", "")) if request.form.get("phone") else "",
+        date_of_birth=dob, verified=request.form.get("verified") == "on",
+        active=True, cover_start_date=date.today(),
+    ))
     db.session.commit()
-    flash("Welfare event recorded.", "success")
+    flash("Covered household member added.", "success")
+    return redirect(url_for("member_profile", member_id=member.id))
+
+
+@app.route("/household/<int:household_id>/verify", methods=["POST"])
+@admin_required
+def verify_household_member(household_id):
+    person = HouseholdMember.query.get_or_404(household_id)
+    person.verified = True
+    db.session.commit()
+    flash(f"{person.full_name} is now verified for household cover.", "success")
+    return redirect(url_for("member_profile", member_id=person.member_id))
+
+
+@app.route("/household/<int:household_id>/deactivate", methods=["POST"])
+@admin_required
+def deactivate_household_member(household_id):
+    person = HouseholdMember.query.get_or_404(household_id)
+    person.active = False
+    db.session.commit()
+    flash(f"{person.full_name} was removed from active cover.", "success")
+    return redirect(url_for("member_profile", member_id=person.member_id))
+
+
+@app.route("/welfare/rule", methods=["POST"])
+@admin_required
+def add_welfare_rule():
+    support_type = request.form.get("support_type", "").strip()
+    relationship = request.form.get("relationship", "").strip()
+    if support_type not in {"Bereavement", "Serious illness", "Hospitalisation", "Accident / emergency"}:
+        flash("Choose a valid support type.", "error")
+        return redirect(url_for("welfare"))
+    if relationship not in {"Principal", "Spouse", "Child", "Mother", "Father"}:
+        flash("Choose a valid relationship.", "error")
+        return redirect(url_for("welfare"))
+    rule = WelfareRule.query.filter_by(support_type=support_type, relationship=relationship).first()
+    if not rule:
+        rule = WelfareRule(support_type=support_type, relationship=relationship)
+        db.session.add(rule)
+    rule.benefit_amount = float(request.form.get("benefit_amount", 0) or 0)
+    rule.max_claims_per_year = int(request.form.get("max_claims_per_year", 1) or 1)
+    rule.waiting_days = int(request.form.get("waiting_days", 0) or 0)
+    rule.eligibility_notes = request.form.get("eligibility_notes", "").strip()
+    rule.active = True
+    db.session.commit()
+    flash("Welfare benefit rule saved.", "success")
+    return redirect(url_for("welfare"))
+
+
+@app.route("/welfare/case", methods=["POST"])
+@admin_required
+def add_support_case():
+    covered_key = request.form.get("covered_key", "").strip()
+    if covered_key.startswith("P:"):
+        member = Member.query.get_or_404(int(covered_key.split(":", 1)[1]))
+        household_id = ""
+    elif covered_key.startswith("H:"):
+        preselected = HouseholdMember.query.get_or_404(int(covered_key.split(":", 1)[1]))
+        member = Member.query.get_or_404(preselected.member_id)
+        household_id = str(preselected.id)
+    else:
+        member = Member.query.get_or_404(int(request.form["member_id"]))
+        household_id = request.form.get("household_member_id", "").strip()
+
+    if member.welfare_status != "Active":
+        flash("This principal member is not currently an active welfare member.", "error")
+        return redirect(url_for("welfare"))
+
+    person = None
+    if household_id:
+        person = HouseholdMember.query.get_or_404(int(household_id))
+        if person.member_id != member.id or not person.active:
+            flash("That covered person is not active under this member.", "error")
+            return redirect(url_for("welfare"))
+        if not person.verified:
+            flash("Verify the household member before approving support.", "error")
+            return redirect(url_for("welfare"))
+        covered_name = person.full_name
+        relationship = person.relationship
+        cover_start = person.cover_start_date or person.registered_at.date()
+    else:
+        covered_name = member.name
+        relationship = "Principal"
+        cover_start = member.created_at.date()
+
+    support_type = request.form.get("support_type", "").strip()
+    event_date = date.today()
+    if request.form.get("event_date"):
+        try:
+            event_date = date.fromisoformat(request.form["event_date"])
+        except ValueError:
+            pass
+
+    rule = WelfareRule.query.filter_by(support_type=support_type, relationship=relationship, active=True).first()
+    if rule:
+        eligible_from = cover_start + timedelta(days=rule.waiting_days or 0)
+        if event_date < eligible_from:
+            flash(f"Cover for this event starts on {eligible_from.isoformat()} under the current waiting-period rule.", "error")
+            return redirect(url_for("welfare"))
+        year_start = date(event_date.year, 1, 1)
+        year_end = date(event_date.year, 12, 31)
+        q = SupportCase.query.filter(
+            SupportCase.member_id == member.id,
+            SupportCase.relationship == relationship,
+            SupportCase.support_type == support_type,
+            SupportCase.event_date >= year_start,
+            SupportCase.event_date <= year_end,
+            SupportCase.status.in_(["Approved", "Paid"]),
+        )
+        if person:
+            q = q.filter(SupportCase.household_member_id == person.id)
+        else:
+            q = q.filter(SupportCase.household_member_id.is_(None))
+        if q.count() >= max(rule.max_claims_per_year or 1, 1):
+            flash("The annual claim limit for this support type has already been reached.", "error")
+            return redirect(url_for("welfare"))
+        amount = float(request.form.get("approved_support") or rule.benefit_amount or 0)
+    else:
+        amount = float(request.form.get("approved_support", 0) or 0)
+
+    case = SupportCase(
+        member_id=member.id,
+        household_member_id=person.id if person else None,
+        covered_name=covered_name,
+        relationship=relationship,
+        support_type=support_type,
+        event_date=event_date,
+        description=request.form.get("description", "").strip(),
+        approved_support=amount,
+        status=request.form.get("status", "Pending"),
+        evidence_reference=request.form.get("evidence_reference", "").strip(),
+    )
+    db.session.add(case)
+    db.session.commit()
+    flash("Welfare support case recorded.", "success")
     return redirect(url_for("welfare"))
 
 
@@ -491,6 +735,7 @@ def api_summary():
         "members": Member.query.count(),
         "active_welfare_members": Member.query.filter_by(welfare_status="Active").count(),
         "opportunities": Opportunity.query.count(),
+        "covered_household_members": HouseholdMember.query.filter_by(active=True).count(),
         "legacy_project": None if not project else {
             "title": project.title,
             "target": project.target_amount,
