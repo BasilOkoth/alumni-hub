@@ -30,6 +30,9 @@
   </nav>
 
   <div class="header-actions">
+    {% if session.get('approver_id') %}
+      <a class="quiet-link" href="{{ url_for('approvals_dashboard') }}">Approvals</a>
+    {% endif %}
     {% if session.get('is_admin') %}
       <a class="quiet-link" href="{{ url_for('admin') }}">Committee</a>
     {% endif %}

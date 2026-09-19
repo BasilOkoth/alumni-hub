@@ -11,7 +11,9 @@
     <div class="command-grid">
       <div><code>BALANCE</code><span>My welfare account</span></div>
       <div><code>JOBS</code><span>Latest opportunities</span></div>
-      <div><code>FUND</code><span>Legacy project progress</span></div>
+      <div><code>FUND</code><span>Welfare fund status</span></div>
+      <div><code>COVER</code><span>My registered household cover</span></div>
+      <div><code>LEGACY</code><span>Shared legacy project progress</span></div>
       <div><code>PROFILE</code><span>My member profile</span></div>
     </div>
   </div>
@@ -27,7 +29,7 @@
     {% if reply %}
       <div class="chat-bubble"><pre>{{reply}}</pre></div>
     {% else %}
-      <div class="chat-placeholder">Try BALANCE, JOBS, FUND, PROFILE or HELP.</div>
+      <div class="chat-placeholder">Try BALANCE, COVER, JOBS, FUND, LEGACY, PROFILE or HELP.</div>
     {% endif %}
   </div>
 </section>

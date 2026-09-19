@@ -77,6 +77,21 @@
 {% if session.get('is_admin') %}
 <section class="section">
   <div class="admin-tools household-admin">
+    <div class="section-intro left"><span class="eyebrow">PAYOUT SAFETY</span><h2>Verify the payment destination.</h2><p>The normal payout goes to the principal member. If the principal member dies, the case uses the registered next of kin instead. Once a case enters approval, the selected number is frozen for that cycle.</p></div>
+    <form method="post" action="{{ url_for('update_payout_profile', member_id=member.id) }}" class="premium-form compact-form">
+      <div class="field"><label>Normal welfare payout number</label><input name="payout_phone" value="{{ member.payout_profile.payout_phone if member.payout_profile else member.phone }}" required></div>
+      <div class="field-grid">
+        <div class="field"><label>Next of kin</label><input name="next_of_kin_name" value="{{ member.payout_profile.next_of_kin_name if member.payout_profile else '' }}"></div>
+        <div class="field"><label>Next-of-kin M-PESA number</label><input name="next_of_kin_phone" value="{{ member.payout_profile.next_of_kin_phone if member.payout_profile else '' }}"></div>
+      </div>
+      <label class="check-line"><input type="checkbox" name="verified" {% if member.payout_profile and member.payout_profile.verified %}checked{% endif %}> Committee has verified these payout details</label>
+      <button class="button dark">Save payout profile</button>
+    </form>
+  </div>
+</section>
+
+<section class="section">
+  <div class="admin-tools household-admin">
     <div class="section-intro left"><span class="eyebrow">COMMITTEE TOOL</span><h2>Add a covered person.</h2><p>New additions should be checked against the group's rules before being verified.</p></div>
     <form method="post" action="{{ url_for('add_household_member', member_id=member.id) }}" class="premium-form compact-form">
       <div class="field-grid">

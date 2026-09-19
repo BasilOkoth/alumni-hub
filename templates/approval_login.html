@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Approval Access — {{ community_name }}{% endblock %}
+{% block content %}
+<section class="login-shell">
+  <div class="login-card">
+    <span class="eyebrow">REMOTE AUTHORIZATION</span>
+    <h1>Approve from wherever you are.</h1>
+    <p>Use the mobile number registered for your committee role and your private approval PIN. This is separate from the shared committee setup PIN.</p>
+    <form class="premium-form bare" method="post">
+      <div class="field"><label>Registered mobile number</label><input name="phone" placeholder="07... or +254..." required></div>
+      <div class="field"><label>Approval PIN</label><input type="password" name="pin" required></div>
+      <button class="button dark full">Open secure approvals</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

@@ -3,15 +3,18 @@
 {% block content %}
 <section class="page-hero slim">
   <span class="eyebrow light">WELFARE CIRCLE</span>
-  <h1>Know who is covered, what qualifies, and what support is available.</h1>
-  <p>Bereavement is only one need. The same transparent structure can support serious illness, hospitalisation and genuine emergencies without turning every case into a new WhatsApp fundraiser.</p>
+  <h1>Support is agreed first. Money moves only after a valid case is approved.</h1>
+  <p>Household cover, benefit rules, protected reserves and remote committee approvals now sit in one auditable workflow.</p>
 </section>
 
 <section class="section">
-  <div class="fund-board">
-    <div><small>CONTRIBUTIONS RECORDED</small><strong>KES {{ fund_total|round(0)|int }}</strong></div>
-    <div><small>BENEFITS PAID</small><strong>KES {{ total_paid_out|round(0)|int }}</strong></div>
-    <div class="highlight"><small>CURRENT RECORDED BALANCE</small><strong>KES {{ current_balance|round(0)|int }}</strong></div>
+  <div class="fund-control-board">
+    <div><small>CONTRIBUTIONS</small><strong>KES {{ fund.contributions|round(0)|int }}</strong><span>Recorded welfare inflow</span></div>
+    <div><small>PAID OUT</small><strong>KES {{ fund.paid|round(0)|int }}</strong><span>Completed welfare support</span></div>
+    <div><small>RECORDED BALANCE</small><strong>KES {{ fund.current_balance|round(0)|int }}</strong><span>Before reserve and commitments</span></div>
+    <div><small>PROTECTED RESERVE</small><strong>KES {{ fund.reserve_floor|round(0)|int }}</strong><span>Not available for ordinary claims</span></div>
+    <div><small>LOCKED FOR CLAIMS</small><strong>KES {{ fund.committed|round(0)|int }}</strong><span>Awaiting approval / processing</span></div>
+    <div class="safe-money"><small>SAFE TO ALLOCATE</small><strong>KES {{ fund.available|round(0)|int }}</strong><span>Maximum available for new cases</span></div>
   </div>
 </section>
 
@@ -47,7 +50,8 @@
 <section class="section admin-tools">
   <div class="section-intro left">
     <span class="eyebrow">COMMITTEE TOOLS</span>
-    <h2>Money, rules and support cases.</h2>
+    <h2>Create the case. Do not release the money.</h2>
+    <p>After a case is created, submit it for remote committee approval. The payout amount and beneficiary number are frozen for that approval cycle.</p>
   </div>
   <div class="tool-grid three-tools">
     <form class="premium-form compact-form" method="post" action="{{url_for('add_contribution')}}">
@@ -68,22 +72,36 @@
       <button class="button dark">Save rule</button>
     </form>
 
-    <form class="premium-form compact-form" method="post" action="{{url_for('add_support_case')}}">
-      <h3>Create support case</h3>
-      <div class="field"><label>Covered person</label><select name="covered_key" required>
-        {% for m in members if m.welfare_status == 'Active' %}
-          <option value="P:{{m.id}}">{{m.name}} — Principal</option>
-          {% for person in m.household_members if person.active %}<option value="H:{{person.id}}">{{person.full_name}} — {{person.relationship}} / {{m.name}}{% if not person.verified %} (pending verification){% endif %}</option>{% endfor %}
-        {% endfor %}
-      </select></div>
-      <div class="field"><label>Support type</label><select name="support_type"><option>Bereavement</option><option>Serious illness</option><option>Hospitalisation</option><option>Accident / emergency</option></select></div>
-      <div class="field-grid"><div class="field"><label>Event date</label><input type="date" name="event_date"></div><div class="field"><label>Support override (KES)</label><input type="number" name="approved_support" placeholder="Leave blank to use rule"></div></div>
-      <div class="field"><label>Evidence / reference</label><input name="evidence_reference" placeholder="Hospital, document ref, committee note"></div>
-      <div class="field"><label>Description</label><textarea name="description"></textarea></div>
-      <div class="field"><label>Status</label><select name="status"><option>Pending</option><option>Approved</option><option>Paid</option></select></div>
-      <button class="button dark">Create case</button>
-    </form>
+    <article class="premium-form compact-form maker-note">
+      <span class="eyebrow">MAKER–CHECKER</span>
+      <h3>Cases are created by an identified approval officer.</h3>
+      <p>Use the remote approval login so the system can record who created the case and automatically exclude that person from approving the same payout.</p>
+      <a class="button dark" href="{{url_for('approval_login')}}">Open approval access</a>
+    </article>
   </div>
+</section>
+{% endif %}
+
+{% if session.get('approver_id') %}
+<section class="section maker-case-section">
+  <div class="section-intro left">
+    <span class="eyebrow">CASE MAKER</span>
+    <h2>Create a welfare event under your own approval identity.</h2>
+    <p>You can create and submit the case, but you cannot approve a case you created. The payout beneficiary and amount are frozen when the approval cycle begins.</p>
+  </div>
+  <form class="premium-form" method="post" action="{{url_for('add_support_case')}}">
+    <div class="field"><label>Covered person</label><select name="covered_key" required>
+      {% for m in members if m.welfare_status == 'Active' %}
+        <option value="P:{{m.id}}">{{m.name}} — Principal</option>
+        {% for person in m.household_members if person.active %}<option value="H:{{person.id}}">{{person.full_name}} — {{person.relationship}} / {{m.name}}{% if not person.verified %} (pending verification){% endif %}</option>{% endfor %}
+      {% endfor %}
+    </select></div>
+    <div class="field"><label>Support type</label><select name="support_type"><option>Bereavement</option><option>Serious illness</option><option>Hospitalisation</option><option>Accident / emergency</option></select></div>
+    <div class="field-grid"><div class="field"><label>Event date</label><input type="date" name="event_date"></div><div class="field"><label>Support override (KES)</label><input type="number" name="approved_support" placeholder="Leave blank to use rule"></div></div>
+    <div class="field"><label>Evidence / reference</label><input name="evidence_reference" placeholder="Hospital, document ref, committee note"></div>
+    <div class="field"><label>Description</label><textarea name="description"></textarea></div>
+    <button class="button dark">Create pending case</button>
+  </form>
 </section>
 {% endif %}
 
@@ -102,20 +120,34 @@
 </section>
 
 <section class="section">
-  <div class="panel-heading"><div><span class="eyebrow">SUPPORT HISTORY</span><h2>Cases the circle has responded to.</h2></div></div>
+  <div class="panel-heading"><div><span class="eyebrow">SUPPORT & APPROVAL HISTORY</span><h2>Every payment has a case behind it.</h2></div>{% if session.get('approver_id') %}<a href="{{url_for('approvals_dashboard')}}">My approvals →</a>{% endif %}</div>
   <div class="timeline">
     {% for e in events %}
-      <article class="timeline-item">
+      <article class="timeline-item case-timeline">
         <div class="timeline-date">{{ e.event_date.strftime('%d') }}<small>{{ e.event_date.strftime('%b') }}</small></div>
         <div>
           <span class="status-chip">{{ e.status }}</span>
-          <h3>{{ e.covered_name }}</h3>
+          <h3>WF-{{ '%04d'|format(e.id) }} · {{ e.covered_name }}</h3>
           <p>{{ e.support_type }} · {{ e.relationship }} · Principal member: {{ e.member.name }}{% if e.description %} · {{ e.description }}{% endif %}</p>
           <strong>KES {{ e.approved_support|round(0)|int }}</strong>
           {% if e.evidence_reference %}<small class="evidence-line">Reference: {{ e.evidence_reference }}</small>{% endif %}
+          {% if e.payout %}
+            {% set approvals=e.case_approvals|selectattr('decision','equalto','Approved')|list|length %}
+            <div class="approval-meter"><span style="--approval:{{ ((approvals / e.payout.required_approvals * 100) if e.payout.required_approvals else 0)|round(0) }}%"></span></div>
+            <small class="evidence-line">{{ approvals }}/{{ e.payout.required_approvals }} approvals · Payout: {{ e.payout.status }} · {{ e.payout.beneficiary_phone }}</small>
+          {% endif %}
         </div>
-        {% set text='❤️ '+community_name+' Welfare Update\n\n'+e.covered_name+' ('+e.relationship+')\n'+e.support_type+'\nApproved support: KES '+(e.approved_support|round(0)|int|string)+'\nStatus: '+e.status+'\n\nDetails: '+request.url_root+'welfare' %}
-        <a class="share-button" target="_blank" href="{{share_url(text)}}">Share to WhatsApp ↗</a>
+        <div class="case-actions">
+          {% if (session.get('is_admin') or session.get('approver_id')) and not e.payout and e.status != 'Paid' %}
+            <form method="post" action="{{url_for('submit_case_for_approval',case_id=e.id)}}"><button class="button dark small">Submit for approval</button></form>
+          {% elif session.get('is_admin') and e.payout and e.payout.status not in ['Processing','Paid'] %}
+            <form method="post" action="{{url_for('reset_case_approval',case_id=e.id)}}"><button class="mini-action">Reset cycle</button></form>
+          {% endif %}
+          {% if e.status == 'Paid' %}
+            {% set text='❤️ '+community_name+' Welfare Update\n\n'+e.covered_name+' ('+e.relationship+')\n'+e.support_type+'\nWelfare support: KES '+(e.approved_support|round(0)|int|string)+'\nStatus: Paid\n\nCase: WF-'+('%04d'|format(e.id)) %}
+            <a class="share-button" target="_blank" href="{{share_url(text)}}">Share to WhatsApp ↗</a>
+          {% endif %}
+        </div>
       </article>
     {% else %}
       <div class="premium-empty wide"><strong>No support cases have been recorded.</strong><p>The point is to have the cover and rules ready before they are needed.</p></div>

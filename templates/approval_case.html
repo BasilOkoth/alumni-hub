@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}WF-{{'%04d'|format(case.id)}} — Approval{% endblock %}
+{% block content %}
+<section class="page-hero slim approval-hero">
+  <span class="eyebrow light">CASE WF-{{'%04d'|format(case.id)}}</span>
+  <h1>{{ case.covered_name }} · {{ case.support_type }}</h1>
+  <p>You are reviewing this as {{ approver.name }}, {{ approver.role }}. The payout instruction is frozen while this approval cycle is open.</p>
+</section>
+<section class="section approval-detail-grid">
+  <article class="approval-case-card">
+    <span class="eyebrow">CASE DETAILS</span>
+    <div class="case-facts">
+      <div><small>Principal member</small><strong>{{case.member.name}}</strong></div>
+      <div><small>Covered person</small><strong>{{case.covered_name}}</strong></div>
+      <div><small>Relationship</small><strong>{{case.relationship}}</strong></div>
+      <div><small>Event date</small><strong>{{case.event_date.strftime('%d %b %Y')}}</strong></div>
+      <div><small>Evidence / reference</small><strong>{{case.evidence_reference or 'No reference entered'}}</strong></div>
+      <div><small>Case status</small><strong>{{case.status}}</strong></div>
+      <div><small>Case maker</small><strong>{% if case.maker %}{{case.maker.approver.name}} · {{case.maker.approver.role}}{% else %}Legacy / unassigned{% endif %}</strong></div>
+    </div>
+    {% if case.description %}<div class="case-note"><small>COMMITTEE NOTE</small><p>{{case.description}}</p></div>{% endif %}
+  </article>
+
+  <article class="locked-payout-card">
+    <span class="eyebrow light">LOCKED PAYMENT INSTRUCTION</span>
+    {% if payout %}
+      <strong class="payout-big">KES {{payout.amount|round(0)|int}}</strong>
+      <div class="locked-row"><span>Beneficiary</span><b>{{payout.beneficiary_name}}</b></div>
+      <div class="locked-row"><span>M-PESA number</span><b>{{payout.beneficiary_phone}}</b></div>
+      <div class="locked-row"><span>Approval rule</span><b>{{payout.required_approvals}} approvals</b></div>
+      <div class="locked-row"><span>Current state</span><b>{{payout.status}}</b></div>
+    {% else %}
+      <p>This case has not been submitted for payout approval.</p>
+    {% endif %}
+  </article>
+</section>
+
+{% if payout %}
+<section class="section">
+  <div class="risk-strip">
+    <div><small>RECORDED FUND BALANCE</small><strong>KES {{fund.current_balance|round(0)|int}}</strong></div>
+    <div><small>PROTECTED RESERVE</small><strong>KES {{fund.reserve_floor|round(0)|int}}</strong></div>
+    <div><small>OTHER COMMITTED CLAIMS</small><strong>KES {{fund.committed|round(0)|int}}</strong></div>
+    <div class="risk-safe"><small>AVAILABLE FOR THIS CASE</small><strong>KES {{fund.available|round(0)|int}}</strong></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="panel-heading"><div><span class="eyebrow">APPROVALS</span><h2>{{ case.case_approvals|selectattr('decision','equalto','Approved')|list|length }} of {{ payout.required_approvals }} approvals recorded</h2></div></div>
+  <div class="decision-ledger">
+    {% for a in case.case_approvals %}
+      <div><span class="status-chip">{{a.decision}}</span><strong>{{a.approver.name}}</strong><small>{{a.approver.role}} · {{a.created_at.strftime('%d %b %Y %H:%M')}}{% if a.note %} · {{a.note}}{% endif %}</small></div>
+    {% else %}
+      <div class="premium-empty wide"><strong>No decision has been recorded yet.</strong></div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  <div class="panel-heading"><div><span class="eyebrow">AUDIT TRAIL</span><h2>Who did what, and when.</h2></div></div>
+  <div class="audit-ledger">
+    {% for log in case.audit_logs|sort(attribute='created_at') %}
+      <div><time>{{log.created_at.strftime('%d %b %Y %H:%M')}}</time><strong>{{log.action}}</strong><span>{{log.actor_name}}{% if log.detail %} · {{log.detail}}{% endif %}</span></div>
+    {% else %}
+      <div><span>No audit entries yet.</span></div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="section">
+  {% if existing %}
+    <div class="decision-locked"><span class="eyebrow">YOUR DECISION IS RECORDED</span><h2>{{existing.decision}}</h2><p>{{existing.note or 'No additional note.'}}</p><a href="{{url_for('approvals_dashboard')}}">Return to approvals →</a></div>
+  {% elif payout.status in ['Awaiting approvals','Ready','Blocked'] %}
+    <form class="decision-box" method="post" action="{{url_for('approval_decision',case_id=case.id)}}">
+      <div><span class="eyebrow">YOUR AUTHORIZATION</span><h2>Does this case match the agreed welfare rules?</h2><p>Approving does not let you edit the amount or recipient. When the required quorum is reached, the system performs one final fund check and, when M-PESA B2C is configured, automatically submits the payout.</p></div>
+      <div class="field"><label>Optional note</label><textarea name="note" placeholder="Record anything another approver should know."></textarea></div>
+      <div class="decision-buttons"><button class="button danger-button" name="decision" value="Rejected">Reject / stop payout</button><button class="button gold" name="decision" value="Approved">Approve locked instruction</button></div>
+    </form>
+  {% else %}
+    <div class="decision-locked"><span class="eyebrow">CASE CLOSED FOR NEW APPROVALS</span><h2>{{payout.status}}</h2><p>The payout is no longer in an approval state.</p></div>
+  {% endif %}
+</section>
+{% endif %}
+{% endblock %}

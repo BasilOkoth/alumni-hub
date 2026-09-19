@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}My Approvals — {{ community_name }}{% endblock %}
+{% block content %}
+<section class="page-hero slim">
+  <span class="eyebrow light">REMOTE APPROVALS</span>
+  <h1>{{ approver.name }}, only approve what you have actually reviewed.</h1>
+  <p>{{ approver.role }} · {{ approver.phone }}. Your decision is timestamped and becomes part of the case audit trail.</p>
+</section>
+<section class="section maker-cta">
+  <div><span class="eyebrow">MAKER–CHECKER</span><h2>Need to report a new welfare event?</h2><p>Create it while signed in as yourself. You will automatically be excluded from approving that case.</p></div>
+  <a class="button dark" href="{{url_for('welfare')}}">Create welfare case</a>
+</section>
+<section class="section">
+  <div class="panel-heading"><div><span class="eyebrow">OPEN CASES</span><h2>Welfare authorization queue</h2></div><a href="{{url_for('approval_logout')}}">Sign out →</a></div>
+  <div class="approval-list">
+    {% for c in cases %}
+      {% set myapproval = c.case_approvals|selectattr('approver_id','equalto',approver.id)|list %}
+      <a class="approval-list-card" href="{{url_for('approval_case',case_id=c.id)}}">
+        <div><small>WF-{{'%04d'|format(c.id)}} · {{c.support_type}}</small><h3>{{c.covered_name}}</h3><p>{{c.relationship}} · Principal: {{c.member.name}} · {{c.event_date.strftime('%d %b %Y')}}</p></div>
+        <div class="approval-amount"><strong>KES {{c.approved_support|round(0)|int}}</strong><span>{% if myapproval %}Your decision: {{myapproval[0].decision}}{% else %}Review case →{% endif %}</span></div>
+      </a>
+    {% else %}
+      <div class="premium-empty wide"><strong>No cases are waiting for you.</strong><p>New approval requests will appear here after the committee creates and submits a valid welfare event.</p></div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

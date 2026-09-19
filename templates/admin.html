@@ -1,11 +1,59 @@
-
 {% extends 'base.html' %}
 {% block title %}Committee — {{ community_name }}{% endblock %}
 {% block content %}
 <section class="page-hero slim">
-  <span class="eyebrow light">COMMITTEE</span>
-  <h1>Manage the circle without turning the group chat into a spreadsheet.</h1>
-  <p>Update welfare status and annual commitments here. Money recording remains inside the Welfare section.</p>
+  <span class="eyebrow light">COMMITTEE CONTROL</span>
+  <h1>Separate membership, approvals and money movement.</h1>
+  <p>The shared committee area configures the system. Individual approvers use their own phone + PIN to authorize welfare cases remotely.</p>
+</section>
+
+<section class="section">
+  <div class="control-summary">
+    <article><small>M-PESA RELEASE MODE</small><strong>{{ mpesa_mode|upper }}</strong><span>{% if mpesa_ready %}Credentials complete{% else %}Credentials not yet complete{% endif %}</span></article>
+    <article><small>PROTECTED RESERVE</small><strong>KES {{ fund.reserve_floor|round(0)|int }}</strong><span>Held back from ordinary cases</span></article>
+    <article><small>SAFE TO ALLOCATE</small><strong>KES {{ fund.available|round(0)|int }}</strong><span>After reserve + committed claims</span></article>
+    <article><small>ACTIVE APPROVERS</small><strong>{{ approvers|selectattr('active')|list|length }}</strong><span>Independent remote authorizers</span></article>
+  </div>
+</section>
+
+<section class="section admin-duo">
+  <div class="premium-form compact-form">
+    <span class="eyebrow">FUND PROTECTION</span>
+    <h2>Set the rules the software will enforce.</h2>
+    <form method="post" action="{{url_for('update_welfare_config')}}">
+      <div class="field"><label>Protected reserve floor (KES)</label><input type="number" name="reserve_floor" min="0" value="{{ fund_config.reserve_floor|round(0)|int }}"></div>
+      <div class="field"><label>Small payment threshold (KES)</label><input type="number" name="small_payment_limit" min="0" value="{{ fund_config.small_payment_limit|round(0)|int }}"></div>
+      <div class="field-grid"><div class="field"><label>Approvals at / below threshold</label><input type="number" name="small_payment_approvals" min="1" value="{{fund_config.small_payment_approvals}}"></div><div class="field"><label>Approvals above threshold</label><input type="number" name="large_payment_approvals" min="1" value="{{fund_config.large_payment_approvals}}"></div></div>
+      <button class="button dark">Save protection rules</button>
+    </form>
+  </div>
+
+  <div class="premium-form compact-form">
+    <span class="eyebrow">ADD APPROVER</span>
+    <h2>Give each officer their own approval identity.</h2>
+    <form method="post" action="{{url_for('add_committee_approver')}}">
+      <div class="field-grid"><div class="field"><label>Name</label><input name="name" required></div><div class="field"><label>Role</label><input name="role" placeholder="Treasurer" required></div></div>
+      <div class="field"><label>WhatsApp / mobile number</label><input name="phone" placeholder="07... or +254..." required></div>
+      <div class="field"><label>Link to alumnus (for conflict checks)</label><select name="member_id"><option value="">Not a registered member / not linked</option>{% for m in members %}<option value="{{m.id}}">{{m.name}}</option>{% endfor %}</select></div>
+      <div class="field"><label>Approval PIN</label><input type="password" name="pin" minlength="6" required><span class="field-help">The PIN is hashed. It cannot be displayed later; reset it by saving the same phone again with a new PIN.</span></div>
+      <button class="button dark">Save approver</button>
+    </form>
+  </div>
+</section>
+
+<section class="section">
+  <div class="panel-heading"><div><span class="eyebrow">REMOTE APPROVERS</span><h2>{{ approvers|length }} configured</h2></div><a href="{{url_for('approval_login')}}">Open approval portal →</a></div>
+  <div class="approver-grid">
+    {% for a in approvers %}
+      <article class="approver-card {% if not a.active %}inactive{% endif %}">
+        <div class="avatar small">{{ a.name[:1]|upper }}</div>
+        <div><small>{{a.role}}</small><h3>{{a.name}}</h3><p>{{a.phone}}{% if a.member %} · linked to {{a.member.name}}{% endif %}</p></div>
+        <form method="post" action="{{url_for('toggle_committee_approver',approver_id=a.id)}}"><button class="mini-action">{{'Deactivate' if a.active else 'Activate'}}</button></form>
+      </article>
+    {% else %}
+      <div class="premium-empty wide"><strong>No approval officers configured.</strong><p>Add the Treasurer, Welfare Secretary, Chairperson or other officers before submitting a payout.</p></div>
+    {% endfor %}
+  </div>
 </section>
 
 <section class="section">
@@ -13,7 +61,6 @@
     <div><span class="eyebrow">MEMBERS</span><h2>{{ members|length }} registered</h2></div>
     <a href="{{ url_for('admin_logout') }}">Lock committee access →</a>
   </div>
-
   <div class="admin-table">
     {% for m in members %}
       <div class="admin-row">
@@ -22,10 +69,7 @@
           <div><strong>{{m.name}}</strong><small>{{m.phone}}{% if m.profession %} · {{m.profession}}{% endif %}</small></div>
         </div>
         <form method="post" action="{{url_for('update_member_status',member_id=m.id)}}" class="admin-form">
-          <select name="welfare_status">
-            <option {% if m.welfare_status=='Network only' %}selected{% endif %}>Network only</option>
-            <option {% if m.welfare_status=='Active' %}selected{% endif %}>Active</option>
-          </select>
+          <select name="welfare_status"><option {% if m.welfare_status=='Network only' %}selected{% endif %}>Network only</option><option {% if m.welfare_status=='Active' %}selected{% endif %}>Active</option></select>
           <input type="number" name="annual_commitment" value="{{m.annual_commitment|round(0)|int}}">
           <button class="button dark small">Save</button>
         </form>

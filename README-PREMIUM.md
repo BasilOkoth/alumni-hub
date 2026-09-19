@@ -104,3 +104,25 @@ This build adds a structured welfare-cover layer:
 ### Important policy principle
 
 Do not define "illness" as every ordinary medical expense. The group should agree on objective thresholds, for example documented serious illness, hospital admission, or accident/emergency. This keeps the fund predictable and protects it from unlimited claims.
+
+## Remote approval + automatic M-PESA release upgrade
+
+This build now includes the welfare payout controls discussed with the alumni group:
+
+- An identified **case maker** creates each new welfare event using their own committee approval login.
+- The case maker cannot approve the same case.
+- Approvers have separate phone + hashed PIN identities and can approve from different locations.
+- The payout instruction snapshots and freezes the recipient, phone number and amount before approval begins.
+- Committee-configurable quorum: default **2 approvals up to KES 10,000** and **3 approvals above KES 10,000**.
+- A configurable **protected reserve floor** is excluded from available money.
+- Pending/processing claims are treated as committed, preventing double allocation.
+- A verified payout profile is required before a case can enter approval.
+- For a principal-member bereavement, the payout goes to the verified **next of kin**, not the deceased member's phone.
+- A rejection stops the payout and sends the case back for review.
+- After quorum, the fund is checked again immediately before release.
+- M-PESA B2C support is wired for `mock`, Safaricom `sandbox`, and `production` modes.
+- When production credentials are configured and `MPESA_AUTO_RELEASE=true`, approval quorum triggers the B2C request automatically.
+- M-PESA result callbacks update the case to Paid or Failed and store the transaction reference.
+- A read-only audit trail records case creation, approvals, authorization and payment outcomes.
+
+See `REMOTE-APPROVAL-MPESA-UPGRADE.md` for deployment and M-PESA environment settings.
