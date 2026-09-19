@@ -28,8 +28,6 @@ services:
         value: Alumni Circle
       - key: COMMUNITY_TAGLINE
         value: Support each other. Open doors. Build a legacy.
-      - key: COMMUNITY_SIZE
-        value: "66"
       - key: WHATSAPP_ACCESS_TOKEN
         sync: false
       - key: WHATSAPP_PHONE_NUMBER_ID

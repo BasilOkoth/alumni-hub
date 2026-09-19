@@ -17,7 +17,7 @@ This is the replacement for the earlier Alumni Hub prototype.
   - Alumni voting
   - WhatsApp Assistant
 - Member profiles now emphasise **Can Give** and **Currently Need**.
-- The 66-person group size is configurable with `COMMUNITY_SIZE`.
+- Removed the fixed membership target entirely. Member counts now come directly from registered members in the database.
 - Community name and tagline are configurable instead of hard-coded to a school.
 - Committee financial actions are protected behind an admin access code.
 - PostgreSQL / Render support retained.
@@ -33,7 +33,6 @@ DATABASE_URL            connected automatically to Render PostgreSQL
 BASE_URL                your Render URL, e.g. https://alumni-hub.onrender.com
 COMMUNITY_NAME          Alumni Circle
 COMMUNITY_TAGLINE       Support each other. Open doors. Build a legacy.
-COMMUNITY_SIZE          66
 ```
 
 WhatsApp integration later:
@@ -107,7 +106,7 @@ Do not define "illness" as every ordinary medical expense. The group should agre
 
 ## Remote approval + automatic M-PESA release upgrade
 
-This build now includes the welfare payout controls discussed with the alumni group:
+This build now includes the welfare payout controls discussed for the alumni network:
 
 - An identified **case maker** creates each new welfare event using their own committee approval login.
 - The case maker cannot approve the same case.

@@ -32,10 +32,6 @@ BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:5000").rstrip("/")
 ADMIN_PIN = os.environ.get("ADMIN_PIN", "")
 COMMUNITY_NAME = os.environ.get("COMMUNITY_NAME", "Alumni Circle")
 COMMUNITY_TAGLINE = os.environ.get("COMMUNITY_TAGLINE", "Support each other. Open doors. Build a legacy.")
-try:
-    COMMUNITY_SIZE = int(os.environ.get("COMMUNITY_SIZE", "66"))
-except ValueError:
-    COMMUNITY_SIZE = 66
 
 # M-PESA B2C integration. Keep MPESA_MODE=disabled until Safaricom onboarding is complete.
 MPESA_MODE = os.environ.get("MPESA_MODE", "disabled").strip().lower()
@@ -580,7 +576,6 @@ def helpers():
         "share_url": share_url,
         "community_name": COMMUNITY_NAME,
         "community_tagline": COMMUNITY_TAGLINE,
-        "community_size": COMMUNITY_SIZE,
     }
 
 
@@ -599,7 +594,6 @@ def dashboard():
     opportunity_count = Opportunity.query.count()
     project = LegacyProject.query.filter_by(status="Active").order_by(LegacyProject.id.desc()).first()
     polls = Poll.query.filter_by(active=True).order_by(Poll.created_at.desc()).all()
-    registration_pct = min(100, (len(members) / COMMUNITY_SIZE * 100)) if COMMUNITY_SIZE else 0
     return render_template(
         "dashboard.html",
         members=members,
@@ -611,7 +605,6 @@ def dashboard():
         opportunity_count=opportunity_count,
         project=project,
         polls=polls,
-        registration_pct=registration_pct,
     )
 
 
@@ -1341,7 +1334,6 @@ def api_summary():
     project = LegacyProject.query.filter_by(status="Active").order_by(LegacyProject.id.desc()).first()
     return jsonify({
         "community": COMMUNITY_NAME,
-        "community_size": COMMUNITY_SIZE,
         "members": Member.query.count(),
         "active_welfare_members": Member.query.filter_by(welfare_status="Active").count(),
         "opportunities": Opportunity.query.count(),

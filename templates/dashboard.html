@@ -23,11 +23,11 @@
     <div class="console-top">
       <div>
         <small>NETWORK PULSE</small>
-        <strong>{{ members|length }} of {{ community_size }}</strong>
+        <strong>{{ members|length }}</strong>
         <span>members registered</span>
       </div>
-      <div class="ring" style="--p:{{ registration_pct|round(0)|int }};">
-        <b>{{ registration_pct|round(0)|int }}%</b>
+      <div class="ring open-ring">
+        <b>LIVE</b>
       </div>
     </div>
     <div class="console-grid">
@@ -190,7 +190,7 @@
     {% else %}
       <div class="premium-empty wide">
         <strong>Your directory starts with the first real alumnus.</strong>
-        <p>No fake people, no school template. Invite your actual 66 members and let the network build itself.</p>
+        <p>No fake people, no school template. Invite your real members and let the network build itself.</p>
         <a class="button dark" href="{{ url_for('register') }}">Register the first member</a>
       </div>
     {% endfor %}
