@@ -1,1 +1,46 @@
-{% extends 'base.html' %}{% block title %}{{member.name}} — Alumni Hub{% endblock %}{% block content %}<section class="profile-hero"><div class="avatar big">{{member.name[:1]}}</div><div><span class="badge {% if member.welfare_status=='Active' %}verified{% endif %}">{{member.welfare_status}}</span><h1>{{member.name}}</h1><p>{{member.profession or 'Profession not set'}}{% if member.location %} • {{member.location}}{% endif %}</p></div></section><section class="section profile-grid"><article class="panel"><span class="eyebrow">CAN HELP WITH</span><p>{{member.can_help or 'Not yet added.'}}</p></article><article class="panel"><span class="eyebrow">LOOKING FOR</span><p>{{member.looking_for or 'Not yet added.'}}</p></article><article class="panel"><span class="eyebrow">WELFARE ACCOUNT</span><h3>KES {{member.amount_paid|round(0)|int}} paid</h3><p>Annual commitment: KES {{member.annual_commitment|round(0)|int}}</p><p>Balance: <strong>KES {{member.welfare_balance|round(0)|int}}</strong></p></article><article class="panel"><span class="eyebrow">WHATSAPP IDENTITY</span><h3>{{member.phone}}</h3><p>This phone number connects the profile to the private WhatsApp assistant.</p></article></section>{% endblock %}
+
+{% extends 'base.html' %}
+{% block title %}{{ member.name }} — {{ community_name }}{% endblock %}
+{% block content %}
+<section class="profile-hero premium-profile">
+  <div class="avatar xlarge">{{ member.initials }}</div>
+  <div class="profile-main">
+    <span class="member-state {% if member.welfare_status=='Active' %}active{% endif %}">{{ member.welfare_status }}</span>
+    <h1>{{ member.name }}</h1>
+    <p>{{ member.profession or 'Profession not added' }}{% if member.location %} · {{ member.location }}{% endif %}</p>
+    {% if member.class_year %}<small>Class / year {{ member.class_year }}</small>{% endif %}
+  </div>
+</section>
+
+<section class="section profile-grid">
+  <article class="profile-card accent-gold">
+    <span class="eyebrow">CAN GIVE</span>
+    <h2>How I can help the network</h2>
+    <p>{{ member.can_help or 'Not added yet.' }}</p>
+  </article>
+
+  <article class="profile-card accent-blue">
+    <span class="eyebrow">CURRENTLY NEED</span>
+    <h2>What I am looking for</h2>
+    <p>{{ member.looking_for or 'Not added yet.' }}</p>
+  </article>
+
+  <article class="profile-card welfare-account">
+    <div class="row-between">
+      <div><span class="eyebrow">WELFARE ACCOUNT</span><h2>{{ member.welfare_status }}</h2></div>
+      <strong>KES {{ member.amount_paid|round(0)|int }}</strong>
+    </div>
+    <div class="progress"><i style="width:{% if member.annual_commitment %}{{ [member.amount_paid/member.annual_commitment*100,100]|min }}{% else %}0{% endif %}%"></i></div>
+    <div class="account-row">
+      <span>Annual commitment <b>KES {{ member.annual_commitment|round(0)|int }}</b></span>
+      <span>Balance <b>KES {{ member.welfare_balance|round(0)|int }}</b></span>
+    </div>
+  </article>
+
+  <article class="profile-card">
+    <span class="eyebrow">WHATSAPP IDENTITY</span>
+    <h2>{{ member.phone }}</h2>
+    <p>This number connects the profile to the private WhatsApp assistant.</p>
+  </article>
+</section>
+{% endblock %}

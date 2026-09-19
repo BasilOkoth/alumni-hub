@@ -1,2 +1,63 @@
-{% extends 'base.html' %}{% block title %}Opportunities — Alumni Hub{% endblock %}{% block content %}<section class="section two-col"><div><span class="eyebrow">OPPORTUNITY NETWORK</span><h1>Jobs, business, referrals and mentorship.</h1><div class="stack">{% for o in opportunities %}<article class="panel"><span class="badge soft">{{o.category}}</span><h2>{{o.title}}</h2><p><strong>{{o.organization}}</strong>{% if o.location %} • {{o.location}}{% endif %}</p><p>{{o.description}}</p>{% if o.deadline %}<small>Deadline: {{o.deadline}}</small>{% endif %}{% if o.link %}<p><a href="{{o.link}}" target="_blank">Open opportunity →</a></p>{% endif %}{% set text='🎯 New Alumni Opportunity\n\n'+o.title+'\n'+(o.organization or '')+'\n'+('Deadline: '+o.deadline if o.deadline else '')+'\n\nView all: '+request.url_root+'opportunities' %}<a class="whatsapp" target="_blank" href="{{share_url(text)}}">Share to WhatsApp</a></article>{% endfor %}</div></div>
-<form method="post" class="seller-form"><h2>Post opportunity</h2><label>Title<input name="title" required></label><label>Category<select name="category"><option>Job</option><option>Business</option><option>Tender</option><option>Scholarship</option><option>Mentorship</option><option>Service</option></select></label><label>Organisation<input name="organization"></label><label>Location<input name="location"></label><label>Deadline<input name="deadline"></label><label>Link<input name="link"></label><label>Description<textarea name="description"></textarea></label><label>Posted by<input name="posted_by"></label><button class="btn primary">Post opportunity</button></form></section>{% endblock %}
+
+{% extends 'base.html' %}
+{% block title %}Opportunities — {{ community_name }}{% endblock %}
+{% block content %}
+<section class="page-hero slim">
+  <span class="eyebrow light">OPPORTUNITY EXCHANGE</span>
+  <h1>Let useful information move through the network.</h1>
+  <p>Jobs, customers, referrals, tenders, scholarships, services and mentorship — value alumni can create for each other.</p>
+</section>
+
+<section class="section opportunities-layout">
+  <div>
+    <div class="panel-heading">
+      <div><span class="eyebrow">LATEST</span><h2>Shared with the circle</h2></div>
+    </div>
+
+    <div class="opportunity-feed">
+      {% for o in opportunities %}
+        <article class="opportunity-card">
+          <div class="opportunity-meta">
+            <span class="category-chip">{{ o.category }}</span>
+            {% if o.deadline %}<span>Deadline · {{ o.deadline }}</span>{% endif %}
+          </div>
+          <h2>{{ o.title }}</h2>
+          <p class="org-line">{{ o.organization or 'Shared by the alumni network' }}{% if o.location %} · {{ o.location }}{% endif %}</p>
+          <p>{{ o.description }}</p>
+          <div class="card-actions">
+            {% if o.link %}<a class="button dark small" href="{{o.link}}" target="_blank">Open opportunity</a>{% endif %}
+            {% set text='🎯 '+community_name+' Opportunity\n\n'+o.title+'\n'+(o.organization or '')+'\n'+('Deadline: '+o.deadline if o.deadline else '')+'\n\nView all: '+request.url_root+'opportunities' %}
+            <a class="share-button" target="_blank" href="{{share_url(text)}}">Share to WhatsApp ↗</a>
+          </div>
+          {% if o.posted_by %}<small>Shared by {{ o.posted_by }}</small>{% endif %}
+        </article>
+      {% else %}
+        <div class="premium-empty wide">
+          <strong>No opportunity has been shared yet.</strong>
+          <p>A job lead, a client referral or a useful introduction can be the first reason someone is glad this network exists.</p>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <aside class="sticky-side">
+    <form method="post" class="premium-form">
+      <span class="eyebrow">ADD VALUE</span>
+      <h2>Share an opportunity</h2>
+      <p class="form-note">Post something another alumnus can actually use.</p>
+
+      <div class="field"><label>Title</label><input name="title" required placeholder="e.g. Procurement Officer"></div>
+      <div class="field"><label>Category</label><select name="category"><option>Job</option><option>Business</option><option>Tender</option><option>Scholarship</option><option>Mentorship</option><option>Service</option></select></div>
+      <div class="field"><label>Organisation</label><input name="organization"></div>
+      <div class="field-grid">
+        <div class="field"><label>Location</label><input name="location"></div>
+        <div class="field"><label>Deadline</label><input name="deadline"></div>
+      </div>
+      <div class="field"><label>Link</label><input name="link" placeholder="https://..."></div>
+      <div class="field"><label>Details</label><textarea name="description"></textarea></div>
+      <div class="field"><label>Shared by</label><input name="posted_by" placeholder="Your name"></div>
+      <button class="button dark full">Share with alumni</button>
+    </form>
+  </aside>
+</section>
+{% endblock %}

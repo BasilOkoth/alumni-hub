@@ -1,4 +1,71 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#173f2b"><title>{% block title %}Alumni Hub{% endblock %}</title><link rel="stylesheet" href="{{ url_for('static',filename='styles.css') }}"><link rel="manifest" href="{{ url_for('static',filename='manifest.json') }}"></head><body>
-<header class="topbar"><a class="brand" href="{{ url_for('dashboard') }}"><span class="brand-mark">AH</span><span><strong>Alumni Hub</strong><small>Support • Opportunity • Legacy</small></span></a><nav><a href="{{ url_for('dashboard') }}">Home</a><a href="{{ url_for('members') }}">Members</a><a href="{{ url_for('welfare') }}">Welfare</a><a href="{{ url_for('opportunities') }}">Opportunities</a><a href="{{ url_for('legacy') }}">Legacy</a><a href="{{ url_for('assistant_simulator') }}">WhatsApp</a><a class="nav-cta" href="{{ url_for('register') }}">Join</a></nav></header>
-{% with messages=get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-wrap">{% for cat,msg in messages %}<div class="flash {{cat}}">{{msg}}</div>{% endfor %}</div>{% endif %}{% endwith %}
-<main>{% block content %}{% endblock %}</main><footer><strong>Alumni Hub</strong><br>WhatsApp for conversation. Alumni Hub for structure, welfare, opportunities and accountability.</footer><script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js').catch(()=>{});}</script></body></html>
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b1020">
+  <meta name="description" content="{{ community_name }} — welfare, opportunity, connection and legacy for your alumni circle.">
+  <title>{% block title %}{{ community_name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static',filename='styles.css') }}">
+  <link rel="manifest" href="{{ url_for('static',filename='manifest.json') }}">
+</head>
+<body>
+<header class="site-header">
+  <a class="brand" href="{{ url_for('dashboard') }}">
+    <span class="brand-seal">A</span>
+    <span class="brand-copy">
+      <strong>{{ community_name }}</strong>
+      <small>Private alumni network</small>
+    </span>
+  </a>
+
+  <nav class="nav">
+    <a href="{{ url_for('dashboard') }}">Home</a>
+    <a href="{{ url_for('members') }}">People</a>
+    <a href="{{ url_for('welfare') }}">Welfare</a>
+    <a href="{{ url_for('opportunities') }}">Opportunities</a>
+    <a href="{{ url_for('legacy') }}">Legacy</a>
+    <a href="{{ url_for('assistant_simulator') }}">WhatsApp</a>
+  </nav>
+
+  <div class="header-actions">
+    {% if session.get('is_admin') %}
+      <a class="quiet-link" href="{{ url_for('admin') }}">Committee</a>
+    {% endif %}
+    <a class="pill-button" href="{{ url_for('register') }}">Join the circle</a>
+  </div>
+</header>
+
+{% with messages=get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-wrap">
+      {% for cat,msg in messages %}
+        <div class="flash {{cat}}">{{msg}}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<main>{% block content %}{% endblock %}</main>
+
+<footer class="footer">
+  <div>
+    <strong>{{ community_name }}</strong>
+    <p>{{ community_tagline }}</p>
+  </div>
+  <div class="footer-links">
+    <a href="{{ url_for('members') }}">People</a>
+    <a href="{{ url_for('welfare') }}">Welfare</a>
+    <a href="{{ url_for('opportunities') }}">Opportunities</a>
+    <a href="{{ url_for('legacy') }}">Legacy</a>
+  </div>
+  <small>WhatsApp for conversation. This platform for memory, fairness and action.</small>
+</footer>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

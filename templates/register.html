@@ -1,1 +1,51 @@
-{% extends 'base.html' %}{% block title %}Join Alumni Hub{% endblock %}{% block content %}<section class="form-page"><div class="form-copy"><span class="eyebrow">MEMBER REGISTRATION</span><h1>Turn 66 contacts into a useful network.</h1><p>Members can remain network-only or opt into the formal welfare circle.</p></div><form method="post" class="seller-form"><h2>Your profile</h2><label>Full name<input name="name" required></label><div class="two"><label>WhatsApp phone<input name="phone" required placeholder="0712..."></label><label>Class / year<input name="class_year"></label></div><div class="two"><label>Location<input name="location"></label><label>Profession<input name="profession"></label></div><label>I can help with<textarea name="can_help"></textarea></label><label>I am looking for<textarea name="looking_for"></textarea></label><h2>Welfare membership</h2><label>Status<select name="welfare_status"><option>Network only</option><option>Active</option></select></label><label>Annual welfare commitment (KES)<input type="number" name="annual_commitment" value="2400"></label><button class="btn primary wide">Register member</button></form></section>{% endblock %}
+
+{% extends 'base.html' %}
+{% block title %}Join — {{ community_name }}{% endblock %}
+{% block content %}
+<section class="form-shell">
+  <div class="form-story">
+    <span class="eyebrow">JOIN THE CIRCLE</span>
+    <h1>Your profile should say more than your phone number.</h1>
+    <p>Tell the network what you do, what you can help with and what you may need. Welfare membership is optional and explicit.</p>
+
+    <div class="story-note">
+      <small>THE PRINCIPLE</small>
+      <strong>Belonging is for everyone. Financial welfare is opt-in.</strong>
+      <p>Network-only members still access people, opportunities, voting and collective projects.</p>
+    </div>
+  </div>
+
+  <form method="post" class="premium-form">
+    <div class="form-step"><span>01</span><div><strong>Your identity</strong><small>Used inside the alumni network</small></div></div>
+    <div class="field"><label>Full name</label><input name="name" required placeholder="Your full name"></div>
+    <div class="field-grid">
+      <div class="field"><label>WhatsApp number</label><input name="phone" required placeholder="0712..."></div>
+      <div class="field"><label>Class / year</label><input name="class_year" placeholder="e.g. 2008"></div>
+    </div>
+    <div class="field-grid">
+      <div class="field"><label>Location</label><input name="location" placeholder="Nairobi"></div>
+      <div class="field"><label>Profession / work</label><input name="profession" placeholder="Teacher, entrepreneur, engineer..."></div>
+    </div>
+
+    <div class="form-step"><span>02</span><div><strong>Exchange value</strong><small>What can the network give and receive?</small></div></div>
+    <div class="field"><label>I can help with</label><textarea name="can_help" placeholder="Mentorship, job referrals, accounting, legal advice, transport, business services..."></textarea></div>
+    <div class="field"><label>I am looking for</label><textarea name="looking_for" placeholder="Clients, work, mentorship, business leads, partnerships, advice..."></textarea></div>
+
+    <div class="form-step"><span>03</span><div><strong>Welfare choice</strong><small>Choose deliberately, not under pressure</small></div></div>
+    <div class="field-grid">
+      <div class="field">
+        <label>Membership status</label>
+        <select name="welfare_status">
+          <option>Network only</option>
+          <option>Active</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Annual commitment (KES)</label>
+        <input type="number" name="annual_commitment" value="2400" min="0">
+      </div>
+    </div>
+    <button class="button dark full" type="submit">Create my alumni profile</button>
+  </form>
+</section>
+{% endblock %}

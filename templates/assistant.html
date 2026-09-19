@@ -1,1 +1,34 @@
-{% extends 'base.html' %}{% block title %}WhatsApp Assistant — Alumni Hub{% endblock %}{% block content %}<section class="form-page"><div class="form-copy"><span class="eyebrow">PRIVATE WHATSAPP ASSISTANT</span><h1>WhatsApp becomes the front door.</h1><p>Once Meta WhatsApp Cloud API credentials are connected, members can privately message the Alumni Hub number using simple commands.</p><div class="command-list"><code>BALANCE</code><span>Welfare account</span><code>JOBS</code><span>Latest opportunities</span><code>FUND</code><span>Legacy project</span><code>PROFILE</code><span>Member profile</span><code>HELP</code><span>Command menu</span></div></div><form method="post" class="seller-form"><h2>Simulate a WhatsApp message</h2><label>Registered phone<input name="phone" value="0712000001" required></label><label>Command<input name="command" value="BALANCE" required></label><button class="btn primary">Send simulated message</button>{% if reply %}<div class="phone-reply"><pre>{{reply}}</pre></div>{% endif %}<hr><p><strong>Webhook URL:</strong><br><code>/webhook/whatsapp</code></p><p><strong>Environment variables:</strong><br><code>WHATSAPP_ACCESS_TOKEN</code><br><code>WHATSAPP_PHONE_NUMBER_ID</code><br><code>WHATSAPP_VERIFY_TOKEN</code><br><code>BASE_URL</code></p></form></section>{% endblock %}
+
+{% extends 'base.html' %}
+{% block title %}WhatsApp Assistant — {{ community_name }}{% endblock %}
+{% block content %}
+<section class="form-shell assistant-shell">
+  <div class="form-story">
+    <span class="eyebrow">WHATSAPP BRIDGE</span>
+    <h1>The group stays social. The assistant handles the repetitive things.</h1>
+    <p>Members privately message the platform number. Their WhatsApp number connects them to their own alumni record.</p>
+
+    <div class="command-grid">
+      <div><code>BALANCE</code><span>My welfare account</span></div>
+      <div><code>JOBS</code><span>Latest opportunities</span></div>
+      <div><code>FUND</code><span>Legacy project progress</span></div>
+      <div><code>PROFILE</code><span>My member profile</span></div>
+    </div>
+  </div>
+
+  <div class="phone-demo">
+    <div class="phone-top"><span></span><strong>{{ community_name }} Assistant</strong><small>private chat</small></div>
+    <form method="post" class="chat-form">
+      <div class="field"><label>Registered phone</label><input name="phone" placeholder="0712..." required></div>
+      <div class="field"><label>Message</label><input name="command" value="BALANCE" required></div>
+      <button class="button gold full">Send simulated message</button>
+    </form>
+
+    {% if reply %}
+      <div class="chat-bubble"><pre>{{reply}}</pre></div>
+    {% else %}
+      <div class="chat-placeholder">Try BALANCE, JOBS, FUND, PROFILE or HELP.</div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

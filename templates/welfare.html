@@ -1,5 +1,76 @@
-{% extends 'base.html' %}{% block title %}Welfare — Alumni Hub{% endblock %}{% block content %}
-<section class="admin-head"><span class="eyebrow">WELFARE FUND</span><h1>Predictable, transparent support.</h1><div class="admin-stats"><div><span>Contributions recorded</span><strong>KES {{fund_total|round(0)|int}}</strong></div><div><span>Benefits paid</span><strong>KES {{total_paid_out|round(0)|int}}</strong></div><div><span>Current balance</span><strong>KES {{current_balance|round(0)|int}}</strong></div></div></section>
-<section class="section two-col"><form class="seller-form" method="post" action="{{url_for('add_contribution')}}"><h2>Record contribution</h2><label>Member<select name="member_id">{% for m in members %}<option value="{{m.id}}">{{m.name}}</option>{% endfor %}</select></label><label>Amount (KES)<input type="number" name="amount" required></label><label>Reference<input name="reference"></label><button class="btn primary">Record payment</button></form>
-<form class="seller-form" method="post" action="{{url_for('add_welfare_event')}}"><h2>Create welfare event</h2><label>Member<select name="member_id">{% for m in members %}<option value="{{m.id}}">{{m.name}}</option>{% endfor %}</select></label><label>Event type<input name="event_type" value="Bereavement" required></label><label>Description<textarea name="description"></textarea></label><label>Approved support (KES)<input type="number" name="approved_support" value="30000"></label><label>Status<select name="status"><option>Approved</option><option>Paid</option><option>Pending</option></select></label><button class="btn primary">Create event</button></form></section>
-<section class="section"><h2>Welfare events</h2><div class="stack">{% for e in events %}<article class="panel"><div class="row-between"><div><strong>{{e.member.name}}</strong><p>{{e.event_type}} — {{e.description}}</p></div><div><span class="badge">{{e.status}}</span><strong>KES {{e.approved_support|round(0)|int}}</strong></div></div>{% set text='❤️ Alumni Welfare Update\n\n'+e.member.name+'\n'+e.event_type+': '+e.description+'\nApproved support: KES '+(e.approved_support|round(0)|int|string)+'\nStatus: '+e.status+'\n\nDetails: '+request.url_root+'welfare' %}<a class="whatsapp" target="_blank" href="{{share_url(text)}}">Share welfare update to WhatsApp</a></article>{% endfor %}</div></section>{% endblock %}
+
+{% extends 'base.html' %}
+{% block title %}Welfare — {{ community_name }}{% endblock %}
+{% block content %}
+<section class="page-hero slim">
+  <span class="eyebrow light">WELFARE CIRCLE</span>
+  <h1>Support that does not depend on guilt or last-minute pressure.</h1>
+  <p>Members opt in, contributions are visible, and support follows rules agreed before an emergency happens.</p>
+</section>
+
+<section class="section">
+  <div class="fund-board">
+    <div><small>CONTRIBUTIONS RECORDED</small><strong>KES {{ fund_total|round(0)|int }}</strong></div>
+    <div><small>BENEFITS PAID</small><strong>KES {{ total_paid_out|round(0)|int }}</strong></div>
+    <div class="highlight"><small>CURRENT RECORDED BALANCE</small><strong>KES {{ current_balance|round(0)|int }}</strong></div>
+  </div>
+</section>
+
+{% if session.get('is_admin') %}
+<section class="section admin-tools">
+  <div class="section-intro left">
+    <span class="eyebrow">COMMITTEE TOOLS</span>
+    <h2>Record money and support events.</h2>
+  </div>
+  <div class="tool-grid">
+    <form class="premium-form compact-form" method="post" action="{{url_for('add_contribution')}}">
+      <h3>Record contribution</h3>
+      <div class="field"><label>Member</label><select name="member_id">{% for m in members %}<option value="{{m.id}}">{{m.name}}</option>{% endfor %}</select></div>
+      <div class="field"><label>Amount (KES)</label><input type="number" name="amount" required></div>
+      <div class="field"><label>Reference</label><input name="reference" placeholder="M-Pesa / bank reference"></div>
+      <button class="button dark">Record payment</button>
+    </form>
+
+    <form class="premium-form compact-form" method="post" action="{{url_for('add_welfare_event')}}">
+      <h3>Create welfare event</h3>
+      <div class="field"><label>Member</label><select name="member_id">{% for m in members %}<option value="{{m.id}}">{{m.name}}</option>{% endfor %}</select></div>
+      <div class="field-grid">
+        <div class="field"><label>Event</label><input name="event_type" value="Bereavement" required></div>
+        <div class="field"><label>Support (KES)</label><input type="number" name="approved_support"></div>
+      </div>
+      <div class="field"><label>Description</label><textarea name="description"></textarea></div>
+      <div class="field"><label>Status</label><select name="status"><option>Approved</option><option>Paid</option><option>Pending</option></select></div>
+      <button class="button dark">Create event</button>
+    </form>
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="panel-heading">
+    <div><span class="eyebrow">SUPPORT HISTORY</span><h2>What the circle has responded to.</h2></div>
+    {% if not session.get('is_admin') %}<a href="{{ url_for('admin_login') }}">Committee access →</a>{% endif %}
+  </div>
+
+  <div class="timeline">
+    {% for e in events %}
+      <article class="timeline-item">
+        <div class="timeline-date">{{ e.created_at.strftime('%d') }}<small>{{ e.created_at.strftime('%b') }}</small></div>
+        <div>
+          <span class="status-chip">{{ e.status }}</span>
+          <h3>{{ e.member.name }}</h3>
+          <p>{{ e.event_type }}{% if e.description %} · {{ e.description }}{% endif %}</p>
+          <strong>KES {{ e.approved_support|round(0)|int }}</strong>
+        </div>
+        {% set text='❤️ '+community_name+' Welfare Update\n\n'+e.member.name+'\n'+e.event_type+': '+e.description+'\nApproved support: KES '+(e.approved_support|round(0)|int|string)+'\nStatus: '+e.status+'\n\nDetails: '+request.url_root+'welfare' %}
+        <a class="share-button" target="_blank" href="{{share_url(text)}}">Share to WhatsApp ↗</a>
+      </article>
+    {% else %}
+      <div class="premium-empty wide">
+        <strong>No welfare events have been recorded.</strong>
+        <p>The fund can still be active and ready — without waiting for tragedy to define the group.</p>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

@@ -1,1 +1,39 @@
-{% extends 'base.html' %}{% block title %}Members — Alumni Hub{% endblock %}{% block content %}<section class="section"><div class="section-head"><div><span class="eyebrow">DIRECTORY</span><h1>Find someone in the network.</h1></div></div><form class="filters"><input name="q" value="{{q}}" placeholder="Search profession, skill, location, need..."><button class="btn primary">Search</button></form><div class="member-grid">{% for m in members %}<a class="member-card" href="{{url_for('member_profile',member_id=m.id)}}"><div class="avatar">{{m.name[:1]}}</div><div><h3>{{m.name}}</h3><p>{{m.profession or 'Profession not set'}}</p><small>{{m.location}}</small></div><span class="badge {% if m.welfare_status=='Active' %}verified{% endif %}">{{m.welfare_status}}</span></a>{% else %}<div class="empty">No members match that search.</div>{% endfor %}</div></section>{% endblock %}
+
+{% extends 'base.html' %}
+{% block title %}People — {{ community_name }}{% endblock %}
+{% block content %}
+<section class="page-hero slim">
+  <span class="eyebrow light">PEOPLE</span>
+  <h1>Find the person, skill or connection you need.</h1>
+  <p>A useful alumni network knows what its members can offer — and what they are currently looking for.</p>
+</section>
+
+<section class="section">
+  <form class="search-bar" method="get">
+    <span>⌕</span>
+    <input name="q" value="{{q}}" placeholder="Search accountant, Kisumu, mentorship, solar, job...">
+    <button class="button dark">Search</button>
+  </form>
+
+  <div class="member-grid premium-members directory-grid">
+    {% for m in members %}
+      <a class="member-card tall" href="{{ url_for('member_profile',member_id=m.id) }}">
+        <div class="avatar large">{{ m.initials }}</div>
+        <div class="member-copy">
+          <h3>{{ m.name }}</h3>
+          <p>{{ m.profession or 'Profession not added' }}</p>
+          <small>{{ m.location or 'Location not added' }}{% if m.class_year %} · Class {{ m.class_year }}{% endif %}</small>
+        </div>
+        <span class="member-state {% if m.welfare_status=='Active' %}active{% endif %}">{{m.welfare_status}}</span>
+        {% if m.can_help %}<div class="mini-value"><b>Can help</b><span>{{ m.can_help }}</span></div>{% endif %}
+      </a>
+    {% else %}
+      <div class="premium-empty wide">
+        <strong>No members found.</strong>
+        <p>Register the first real alumnus or try a broader search.</p>
+        <a class="button dark" href="{{ url_for('register') }}">Join the circle</a>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

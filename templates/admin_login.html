@@ -1,0 +1,16 @@
+
+{% extends 'base.html' %}
+{% block title %}Committee access — {{ community_name }}{% endblock %}
+{% block content %}
+<section class="login-shell">
+  <div class="login-card">
+    <span class="eyebrow">COMMITTEE ACCESS</span>
+    <h1>Private administration.</h1>
+    <p>Financial records and member welfare settings are protected from the public site.</p>
+    <form method="post" class="premium-form bare">
+      <div class="field"><label>Admin access code</label><input name="pin" type="password" required autofocus></div>
+      <button class="button dark full">Unlock committee tools</button>
+    </form>
+  </div>
+</section>
+{% endblock %}
